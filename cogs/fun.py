@@ -8,6 +8,7 @@ class Fun(commands.Cog):
 
     @commands.command()
     async def testy(self, ctx):
+        print(ctx.message.content)
         await ctx.send("yes you testy")
 
 
