@@ -4,7 +4,7 @@ import pathlib
 
 moist_id = 272945366029172748
 
-BASE_DIR = pathlib.Path(__file__).parent
+BASE_DIR = pathlib.Path(__file__).parent.parent
 
 COGS_DIR = BASE_DIR / "cogs"
 

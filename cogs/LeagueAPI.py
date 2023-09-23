@@ -169,7 +169,6 @@ class League(Cog):
             headers={"X-Riot-Token": self.token})
 
         status_code = r[0]
-        print(status_code)
         if status_code != 200:
             if status_code == 404:
                 return await ctx.send(f"The summoner name `{summoner_name}` does not exist!!")
