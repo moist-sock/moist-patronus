@@ -18,6 +18,7 @@ class Admin(commands.Cog):
 
     @commands.command()
     async def update(self, ctx):
+        # holy shit
         repository_url = "https://github.com/moist-sock/moist-patronus"
 
         try:
