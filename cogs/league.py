@@ -138,26 +138,6 @@ class League(Cog):
         return await ctx.send('No games of ranked found')
 
     @commands.command()
-    async def poop(self, ctx, *args):
-        pass
-        if self._check_if_not_moist(ctx):
-            return await ctx.send('You are not allowed to do that')
-
-        all_names_raw = ' '.join(args)
-        all_names_raw += ' '
-        all_names = all_names_raw.split(' joined the lobby ')
-        all_names.pop(-1)
-        puuid_list = []
-        for summoner in all_names:
-            r = await async_request.request(
-                f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner}',
-                headers={"X-Riot-Token": self.token})
-            player_dict = r[1]
-            puuid_list.append(player_dict['puuid'])
-
-        await ctx.send('\n'.join(puuid_list))
-
-    @commands.command()
     async def summoner(self, ctx, *args, ff=False):
         """Adds summoner info into json so the mastery command will work."""
         summoner_name = " ".join(args).strip()
@@ -286,7 +266,7 @@ class League(Cog):
 
     @commands.command(name='color', aliases=['colour'])
     async def color(self, ctx, *args):
-        if ctx.author.id != self.bot.settings.MOIST_S0CK_ID:
+        if ctx.author.id != moist_id:
             return
 
         champion = await self.parse_champion_input([args[0]])
