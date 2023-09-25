@@ -34,15 +34,15 @@ class Admin(commands.Cog):
 
         try:
             subprocess.run(["git", "pull", repository_url], check=True)
-            self.bot.logger("Code updated successfully.")
+            # self.bot.logger("Code updated successfully.")
             await ctx.send("Code updated successfully.")
 
         except subprocess.CalledProcessError as e:
-            self.bot.logger.info(f"Error updating code: {e}")
+            # self.bot.logger.info(f"Error updating code: {e}")
             await ctx.send("I can't :(")
 
         except Exception as e:
-            self.bot.logger(f"An unexpected error occurred: {e}")
+            # self.bot.logger(f"An unexpected error occurred: {e}")
             await ctx.send("I can't :(")
 
 
