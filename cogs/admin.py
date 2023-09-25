@@ -1,3 +1,5 @@
+import os
+import sys
 import subprocess
 import discord.ext.commands.errors
 from discord.ext import commands
@@ -6,6 +8,15 @@ from discord.ext import commands
 class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    def restart_program(self):
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+
+    @commands.command()
+    async def restart(self, ctx):
+        await ctx.send("Restarting bot...")
+        self.restart_program()
 
     @commands.command()
     async def reload(self, ctx, message):
@@ -18,16 +29,21 @@ class Admin(commands.Cog):
 
     @commands.command()
     async def update(self, ctx):
-        # holy shit
         repository_url = "https://github.com/moist-sock/moist-patronus"
+        token = "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"
 
         try:
             subprocess.run(["git", "pull", repository_url], check=True)
-            print("Code updated successfully.")
+            self.bot.logger("Code updated successfully.")
+            await ctx.send("Code updated successfully.")
+
         except subprocess.CalledProcessError as e:
-            print(f"Error updating code: {e}")
+            self.bot.logger.info(f"Error updating code: {e}")
+            await ctx.send("I can't :(")
+
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            self.bot.logger(f"An unexpected error occurred: {e}")
+            await ctx.send("I can't :(")
 
 
 async def setup(bot):

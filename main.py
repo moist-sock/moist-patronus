@@ -8,10 +8,9 @@ logger = settings.logging.getLogger("bot")
 def run():
     with open("config/chickentoken.txt", "r") as f:
         token = f.read()
-
-    intents = discord.Intents.default()
-    intents.message_content = True
+    intents = discord.Intents.all()
     bot = commands.Bot(command_prefix="!", intents=intents)
+    bot.logger = logger
 
     @bot.event
     async def on_ready():
