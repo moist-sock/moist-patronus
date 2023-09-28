@@ -74,7 +74,7 @@ def kc_wrapper(stats):
     returns a nested dictionary with the boss in osrs as the key
     the two sub keys being 'rank' and 'kc'
     """
-    file_path = r"C:\Users\moist\PycharmProjects\testorsomething\osrs\hiscores_stuff\osrs_bosses_list.json"
+    file_path = r"osrs\hiscores_stuff\osrs_bosses_list.json"
     with open(file_path, "r") as f:
         bosses = json.load(f)
 
