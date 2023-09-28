@@ -18,7 +18,7 @@ class Runescape(commands.Cog):
 
         print(stats)
 
-    @commands.command(aliases="spread")
+    @commands.command(aliases=["spread"])
     async def manually_update_spreadsheet(self, ctx):
         await self.run_spreadsheets()
 
