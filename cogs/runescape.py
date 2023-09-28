@@ -2,12 +2,17 @@ from discord.ext import commands
 from util.daily_task import run_daily_task
 from osrs.hiscores_stuff.hiscores import get_boss_kc
 from osrs.spreadsheets.google_sheet_inputter import inputter
+from osrs.hiscores_stuff.boss_name_getter import main as boss_name
 
 
 class Runescape(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.spreadsheet = False
+
+    @commands.command()
+    async def test(self, ctx):
+        await boss_name()
 
     @commands.command()
     async def lookup(self, ctx, *args):
