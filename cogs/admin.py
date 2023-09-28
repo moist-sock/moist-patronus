@@ -24,7 +24,8 @@ class Admin(commands.Cog):
             await self.bot.reload_extension(f"cogs.{message.lower()}")
             await ctx.send(f"{message} cog has successfully been reloaded :)")
 
-        except discord.ext.commands.errors.ExtensionNotLoaded:
+        except (discord.ext.commands.errors.ExtensionNotLoaded, discord.ext.commands.errors.CommandInvokeError) as e:
+            print(e)
             await ctx.send(f"{message} cog has failed to be reloaded :(")
 
     @commands.command()

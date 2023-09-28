@@ -317,6 +317,27 @@ class League(Cog):
         else:
             return await ctx.send('Color has not been changed')
 
+    @commands.command()
+    async def match(self, ctx, *args):
+        try:
+            match_id = ("".join(args).strip())
+
+        except ValueError:
+            return await ctx.send("That doesn't look like a match id to me")
+
+        url = f"https://americas.api.riotgames.com/lol/match/v5/matches/{match_id}"
+
+        r = await async_request.request(url, headers={"X-Riot-Token": self.token})
+
+        status_code = r[0]
+
+        if status_code != 200:
+            print(f"error {status_code}")
+
+        file_location = "storage/match_id_info.json"
+        with open(file_location, "w") as f:
+            json.dump(r[1], f, indent=2)
+
     async def id(self, summoner_name):
         r = await async_request.request(
             f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}',

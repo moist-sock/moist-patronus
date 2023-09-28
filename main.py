@@ -6,7 +6,7 @@ logger = settings.logging.getLogger("bot")
 
 
 def run():
-    with open("config/chickentoken.txt", "r") as f:
+    with open("config/token.txt", "r") as f:
         token = f.read()
     intents = discord.Intents.all()
     bot = commands.Bot(command_prefix="!", intents=intents)
@@ -18,7 +18,12 @@ def run():
 
         for cog in settings.COGS_DIR.glob("*.py"):
             cog = f"cogs.{cog.name[:-3]}"
-            await bot.load_extension(cog)
+            try:
+                await bot.load_extension(cog)
+
+            except discord.ext.commands.errors.ExtensionFailed as e:
+                logger.error(f"Failed to load {cog[5:]} cog -- {e}")
+                continue
 
     bot.run(token, root_logger=True)
 
