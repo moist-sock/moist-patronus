@@ -31,7 +31,6 @@ class Admin(commands.Cog):
     @commands.command()
     async def update(self, ctx):
         repository_url = "https://github.com/moist-sock/moist-patronus"
-        token = "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"
 
         try:
             subprocess.run(["git", "pull", repository_url], check=True)
