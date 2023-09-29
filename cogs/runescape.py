@@ -11,10 +11,6 @@ class Runescape(commands.Cog):
         self.spreadsheet = False
 
     @commands.command()
-    async def test(self, ctx):
-        await boss_name()
-
-    @commands.command()
     async def lookup(self, ctx, *args):
         name = " ".join(args)
         status, stats = await get_boss_kc(name)
@@ -22,6 +18,10 @@ class Runescape(commands.Cog):
             return print("bad name")
 
         print(stats)
+
+    @commands.command(aliases=["boss"])
+    async def manually_update_boss_name(self, ctx):
+        await boss_name()
 
     @commands.command(aliases=["spread"])
     async def manually_update_spreadsheet(self, ctx):

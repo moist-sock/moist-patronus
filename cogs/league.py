@@ -48,6 +48,11 @@ class League(Cog):
         """Checks if the moist is the one that used the command."""
         return ctx.author.id != moist_id and ctx.author.id != 765451755332304927
 
+
+    @commands.command()
+    async def test(self, ctx):
+        pass
+
     @commands.command()
     async def token(self, ctx, *args):
         """Command that easily allows me to update the RIOT api key"""

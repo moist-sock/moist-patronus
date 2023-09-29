@@ -3,7 +3,7 @@ import aiohttp
 
 async def request(url, **kwargs):
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, **kwargs) as r:
+        async with session.get(url, ssl=False, **kwargs) as r:
             if r.status != 200:
                 return r.status, None
 
