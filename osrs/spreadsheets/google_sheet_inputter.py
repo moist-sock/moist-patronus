@@ -51,7 +51,7 @@ async def inputter(boss_name, name_of_sheet, extra=None, compare_rank=1000, main
 
 
 async def correct_boss(boss_name):
-    file_name = r"C:\Users\moist\PycharmProjects\testorsomething\osrs\hiscores_stuff\osrs_bosses.json"
+    file_name = r"osrs\hiscores_stuff\osrs_bosses.json"
     with open(file_name, "r") as f:
         boss_name_to_number = json.load(f)
 
@@ -63,7 +63,7 @@ async def correct_boss(boss_name):
 
 
 def get_sheet(name_of_sheet):
-    account = gspread.service_account(r"C:\Users\moist\Downloads\osrs-toa-expert-kc-tracker-c68cfa94b163.json")
+    account = gspread.service_account(r"config/gspread_token.json")
 
     sheet = account.open(name_of_sheet)
 

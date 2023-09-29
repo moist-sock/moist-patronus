@@ -1,9 +1,9 @@
 import discord
 from util import settings
 from discord.ext import commands
+import sys
 
 logger = settings.logging.getLogger("bot")
-
 
 def run():
     with open("config/token.txt", "r") as f:
@@ -14,6 +14,9 @@ def run():
 
     @bot.event
     async def on_ready():
+        """sys.stdout = open('logs/logs.txt', 'a')
+        sys.stderr = sys.stdout"""
+
         logger.info(f"Logged in as {bot.user}")
 
         for cog in settings.COGS_DIR.glob("*.py"):
@@ -26,6 +29,7 @@ def run():
                 continue
 
     bot.run(token, root_logger=True)
+
 
 
 if __name__ == "__main__":

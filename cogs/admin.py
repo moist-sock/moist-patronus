@@ -9,6 +9,15 @@ class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    """@commands.command()
+    async def logs(self, ctx):
+        filename = "logs/logs.txt"
+        sys.stdout.close()
+        await ctx.send(file=discord.File(filename))
+
+        sys.stdout = open('logs/logs.txt', 'a')
+        sys.stderr = sys.stdout"""
+
     def restart_program(self):
         python = sys.executable
         os.execl(python, python, *sys.argv)
@@ -21,7 +30,8 @@ class Admin(commands.Cog):
     @commands.command()
     async def reload(self, ctx, message):
         try:
-            await self.bot.reload_extension(f"cogs.{message.lower()}")
+            await self.bot.unload_extension(f"cogs.{message.lower()}")
+            await self.bot.load_extension(f"cogs.{message.lower()}")
             await ctx.send(f"{message} cog has successfully been reloaded :)")
 
         except (discord.ext.commands.errors.ExtensionNotLoaded, discord.ext.commands.errors.CommandInvokeError) as e:
