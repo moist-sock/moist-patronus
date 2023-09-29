@@ -28,7 +28,7 @@ async def get_hiscores_source_page(desired_rank, boss_name):
 
     desired_rank = str(desired_rank)
     osrs_hiscores_url = f"https://secure.runescape.com/m=hiscore_oldschool/a=97/c=ATksZos0eXY/overall?category_type=1" \
-                        f"&rank={desired_rank}&table={boss_to_number[boss_name]}&submit=Search "
+                        f"&rank={desired_rank}&table={boss_to_number[boss_name]['ID']}&submit=Search "
     status, body = await request(osrs_hiscores_url)
     if status != 200:
         return status, None

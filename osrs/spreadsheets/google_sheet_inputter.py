@@ -55,7 +55,7 @@ async def correct_boss(boss_name):
     with open(file_name, "r") as f:
         boss_name_to_number = json.load(f)
 
-    boss_number = boss_name_to_number[boss_name]
+    boss_number = boss_name_to_number[boss_name]["ID"]
     status, page = await get_page(boss_number)
     osrs_boss_name = name_of_boss(page)
 

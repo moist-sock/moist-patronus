@@ -163,7 +163,12 @@ class League(Cog):
 
         with open('storage/league.json', 'w') as f:
             persons_id = str(ctx.author.id)
-            league_dict['users'][persons_id] = {'summoner name': summoner_name, 'summoner id': summoner_id}
+            user_dict = league_dict['users'].get(persons_id, {})
+            user_dict['summoner name'] = summoner_name
+            user_dict['summoner id'] = summoner_id
+
+            league_dict['users'][persons_id] = user_dict
+
             json.dump(league_dict, f, indent=2)
 
         if ff:

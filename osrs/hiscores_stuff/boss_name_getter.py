@@ -28,17 +28,27 @@ async def main():
 
     with open(r"osrs/hiscores_stuff/osrs_bosses_list.json", "w") as f:
         print(f"saving boss list")
-        json.dump(name_of_bosses, f)
-
+        json.dump(name_of_bosses, f, indent=2)
 
     dictoio = {}
 
     for count, bossy in enumerate(name_of_bosses, 1):
-        dictoio[bossy] = count
+        dictoio[bossy] = {}
+        dictoio[bossy]["ID"] = count
+
+    with open(r"osrs/hiscores_stuff/osrs_bosses.json", "r") as f:
+        old_boss_dict = json.load(f)
+
+        for boss in old_boss_dict:
+
+            dictoio[boss]["PNG"] = old_boss_dict[boss].get("PNG", None)
+            dictoio[boss]["ALIAS"] = old_boss_dict[boss].get("ALIAS", [])
+            dictoio[boss]["COLOR"] = old_boss_dict[boss].get("COLOR", None)
 
     with open(r"osrs/hiscores_stuff/osrs_bosses.json", "w") as f:
+
         print(f"saving boss json")
-        json.dump(dictoio, f)
+        json.dump(dictoio, f, indent=2)
 
 
 async def get_page(number):
