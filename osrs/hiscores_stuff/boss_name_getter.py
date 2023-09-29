@@ -26,7 +26,7 @@ async def main():
 
     print(name_of_bosses)
 
-    with open(r"osrs/hiscores_stuff/osrs_bosses_list.json", "w") as f:
+    with open(r"osrs/hiscores_stuff/storage/osrs_bosses.json", "w") as f:
         print(f"saving boss list")
         json.dump(name_of_bosses, f, indent=2)
 
@@ -36,7 +36,7 @@ async def main():
         dictoio[bossy] = {}
         dictoio[bossy]["ID"] = count
 
-    with open(r"osrs/hiscores_stuff/osrs_bosses.json", "r") as f:
+    with open(r"storage/osrs_bosses.json", "r") as f:
         old_boss_dict = json.load(f)
 
         for boss in old_boss_dict:
@@ -45,7 +45,7 @@ async def main():
             dictoio[boss]["ALIAS"] = old_boss_dict[boss].get("ALIAS", [])
             dictoio[boss]["COLOR"] = old_boss_dict[boss].get("COLOR", None)
 
-    with open(r"osrs/hiscores_stuff/osrs_bosses.json", "w") as f:
+    with open(r"storage/osrs_bosses.json", "w") as f:
 
         print(f"saving boss json")
         json.dump(dictoio, f, indent=2)

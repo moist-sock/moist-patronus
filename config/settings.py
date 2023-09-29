@@ -2,13 +2,16 @@ import logging
 from logging.config import dictConfig
 import pathlib
 
-moist_id = 272945366029172748
 
-BASE_DIR = pathlib.Path(__file__).parent.parent
+class Settings:
+    def __init__(self):
+        self.moist_id = 272945366029172748
 
-COGS_DIR = BASE_DIR / "cogs"
+        self.BASE_DIR = pathlib.Path(__file__).parent.parent
 
-LOGGING_CONFIG = {
+        self.COGS_DIR = self.BASE_DIR / "cogs"
+
+        self.LOGGING_CONFIG = {
     "version": 1,
     "disabled_existing_loggers": False,
     "formatters": {
@@ -46,4 +49,4 @@ LOGGING_CONFIG = {
     },
 }
 
-dictConfig(LOGGING_CONFIG)
+        dictConfig(self.LOGGING_CONFIG)

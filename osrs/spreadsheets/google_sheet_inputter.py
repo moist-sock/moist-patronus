@@ -51,7 +51,7 @@ async def inputter(boss_name, name_of_sheet, extra=None, compare_rank=1000, main
 
 
 async def correct_boss(boss_name):
-    file_name = r"osrs\hiscores_stuff\osrs_bosses.json"
+    file_name = "storage/osrs_bosses.json"
     with open(file_name, "r") as f:
         boss_name_to_number = json.load(f)
 

@@ -10,7 +10,7 @@ class Fun(commands.Cog):
     @commands.guild_only()
     async def testy(self, ctx):
         print(ctx.message.content)
-        await ctx.send("yes youd testy")
+        await ctx.send("yes ysou testy")
 
 
 async def setup(bot):

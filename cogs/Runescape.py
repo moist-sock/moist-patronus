@@ -1,13 +1,13 @@
+import asyncio
 import json
 
 from discord import Embed
 from discord.ext import commands
-from util.daily_task import run_daily_task
 from osrs.hiscores_stuff.hiscores import get_boss_kc
 from osrs.spreadsheets.google_sheet_inputter import inputter
 from osrs.hiscores_stuff.boss_name_getter import main as boss_name
-from util.settings import moist_id
 from util.attachment_reader import ctx_attachment_reader as reader
+from util.daily_task import run_daily_task
 import textdistance
 
 
@@ -15,13 +15,18 @@ class Runescape(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.spreadsheet = False
+        asyncio.create_task(self.spreadsheet_loop())
 
-        with open("osrs/hiscores_stuff/osrs_bosses.json", "r") as f:
+        with open("storage/osrs_bosses.json", "r") as f:
             self.boss_dict = json.load(f)
-
 
         with open('storage/league.json', 'r') as f:
             self.gamer_dict = json.load(f)
+
+
+    @commands.command()
+    async def test(self, ctx):
+        print(self.spreadsheet)
 
     @commands.command()
     async def osrs(self, ctx, *args):
@@ -40,7 +45,7 @@ class Runescape(commands.Cog):
     @commands.command(aliases=['bj'])
     async def boss_json(self, ctx):
         boss_json = await reader(ctx)
-        with open("osrs/hiscores_stuff/osrs_bosses.json", "w") as f:
+        with open("storage/osrs_bosses.json", "w") as f:
             json.dump(boss_json, f, indent=2)
 
         return await ctx.send("All done!")
@@ -105,11 +110,12 @@ class Runescape(commands.Cog):
         await self.run_spreadsheets()
         return await ctx.send("All done!")
 
-    async def spreadsheets_loop(self):
-        while True:
+    async def spreadsheet_loop(self):
+        await self.bot.wait_until_ready()
+        while self is self.bot.get_cog('Runescape'):
             self.spreadsheet = True
             await run_daily_task('08:00:00')
-            await self.bot.get_user(moist_id).send("I am gonna update the spreadsheets now :D")
+            await self.bot.get_user(self.bot.settings.moist_id).send("I am gonna update the spreadsheets now :D")
             await self.run_spreadsheets()
 
     async def run_spreadsheets(self):

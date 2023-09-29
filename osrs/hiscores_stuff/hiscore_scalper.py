@@ -23,7 +23,7 @@ async def get_kc_for_rank(rank, boss_name):
 
 
 async def get_hiscores_source_page(desired_rank, boss_name):
-    with open(r"osrs/hiscores_stuff/osrs_bosses.json", "r") as f:
+    with open(r"storage/osrs_bosses.json", "r") as f:
         boss_to_number = json.load(f)
 
     desired_rank = str(desired_rank)

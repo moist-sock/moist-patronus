@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import importlib
 import discord.ext.commands.errors
 from discord.ext import commands
 
@@ -30,8 +31,8 @@ class Admin(commands.Cog):
     @commands.command()
     async def reload(self, ctx, message):
         try:
-            await self.bot.unload_extension(f"cogs.{message.lower()}")
-            await self.bot.load_extension(f"cogs.{message.lower()}")
+            await self.bot.unload_extension(f"cogs.{message}")
+            await self.bot.load_extension(f"cogs.{message}")
             await ctx.send(f"{message} cog has successfully been reloaded :)")
 
         except (discord.ext.commands.errors.ExtensionNotLoaded, discord.ext.commands.errors.CommandInvokeError) as e:

@@ -11,7 +11,6 @@ from util import async_request
 from discord.ext import commands
 from discord.ext.commands import Cog
 from util import champs
-from util.settings import moist_id
 
 try:
     with open('storage/league.json') as f:
@@ -46,7 +45,7 @@ class League(Cog):
 
     def _check_if_not_moist(self, ctx):
         """Checks if the moist is the one that used the command."""
-        return ctx.author.id != moist_id and ctx.author.id != 765451755332304927
+        return ctx.author.id != self.bot.settings.moist_id and ctx.author.id != 765451755332304927
 
     @commands.command()
     async def token(self, ctx, *args):
@@ -271,7 +270,7 @@ class League(Cog):
 
     @commands.command(name='color', aliases=['colour'])
     async def color(self, ctx, *args):
-        if ctx.author.id != moist_id:
+        if ctx.author.id != self.bot.settings.moist_id:
             return
 
         champion = await self.parse_champion_input([args[0]])

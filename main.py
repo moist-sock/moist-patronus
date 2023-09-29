@@ -1,9 +1,9 @@
 import discord
-from util import settings
+from config import settings
 from discord.ext import commands
-import sys
 
 logger = settings.logging.getLogger("bot")
+
 
 def run():
     with open("config/token.txt", "r") as f:
@@ -29,7 +29,6 @@ def run():
                 continue
 
     bot.run(token, root_logger=True)
-
 
 
 if __name__ == "__main__":
