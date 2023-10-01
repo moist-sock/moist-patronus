@@ -1,16 +1,14 @@
-import json
 import asyncio
-
 import datetime
+import json
 
 import discord
 import textdistance
 from discord import Embed
-
-from util import async_request
 from discord.ext import commands
 from discord.ext.commands import Cog
-from util import champs
+
+from util import async_request, champs
 
 try:
     with open('storage/league.json') as f:
@@ -20,7 +18,7 @@ try:
 
 except FileNotFoundError:
     # Token is set to a string that needs some characters in it so the status code returns "403 forbidden"
-    # It causes less errors this way vs an empty string
+    # It causes fewer errors this way vs an empty string
     league_dict = {'token': 'None', 'users': {}}
 
     with open('storage/league.json', 'w') as f:
@@ -48,6 +46,54 @@ class League(Cog):
         return ctx.author.id != self.bot.settings.moist_id and ctx.author.id != 765451755332304927
 
     @commands.command()
+    async def rank(self, ctx, *args):
+        summoner_name = " ".join(args)
+
+        ranked_solo = True
+        queues = ["RANKED_FLEX_SR", "RANKED_SOLO_5x5"]
+        if summoner_name:
+            status_code, summoner_dict = await self.summoner_name_request(ctx, summoner_name)
+            if status_code != 200:
+                return
+            summoner_name = summoner_dict["name"]
+            summoner_id = summoner_dict["id"]
+
+        else:
+            summoner_name, summoner_id = await self.get_summoner(ctx)
+
+        if summoner_name is None:
+            return
+
+        url = f"https://na1.api.riotgames.com/lol/league/v4/entries/by-summoner/{summoner_id}"
+
+        r = await self.league_api_request(url)
+
+        if r[0] != 200:
+            print(f"error {r[0]}: !rank command")
+            return
+
+        rank_list = r[1]
+
+        if not rank_list:
+            return await ctx.send("This account is not ranked")
+
+        try:
+            if rank_list[1]["queueType"] == "RANKED_SOLO_5x5":
+                rank_dict = rank_list[ranked_solo]
+
+            else:
+                rank_dict = rank_list[not ranked_solo]
+
+        except IndexError:
+            rank_dict = rank_list[0]
+            if rank_dict['queueType'] != queues[ranked_solo]:
+                return await ctx.send("not ranked!")
+
+        msg = " ".join([rank_dict["tier"].title(), rank_dict["rank"], str(rank_dict["leaguePoints"])]) + " lp"
+
+        await ctx.send(msg)
+
+    @commands.command(hidden=True)
     async def token(self, ctx, *args):
         """Command that easily allows me to update the RIOT api key"""
         if self._check_if_not_moist(ctx):
@@ -55,8 +101,9 @@ class League(Cog):
 
         new_api_key = args[0].strip()
         for i in range(50):
-            r = await async_request.request(f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/moist s0ck',
-                                            headers={"X-Riot-Token": new_api_key})
+            r = await async_request.request(
+                f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/moist s0ck',
+                headers={"X-Riot-Token": new_api_key})
 
             if r[0] == 200:
                 break
@@ -75,28 +122,20 @@ class League(Cog):
     @commands.command()
     async def streak(self, ctx, *args):
         """Checks the win/loss ranked streak of an NA gamer."""
-        if self._check_if_not_moist(ctx):
-            return await ctx.send('You are not allowed to do that')
 
         emote = ''
         outcome = ''
         last_few_games = []
         summoner_name = " ".join(args)
-        r = await async_request.request(f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/'
-                                        f'{summoner_name}',
-                                        headers={"X-Riot-Token": self.token})
-        if r[0] != 200:
-            if r[0] == 403:
-                return await ctx.send(self.expired)
+        status_code, summoner_dict = await self.summoner_name_request(ctx, summoner_name)
 
-            return await ctx.send(f'No1: {r[0]}')
+        if status_code != 200:
+            return
 
-        summoner_puuid = r[1]['puuid']
-        summoner_name = r[1]['name']
-        r = await async_request.request(
-            f'https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{summoner_puuid}'
-            f'/ids?type=ranked&start=0&count=10',
-            headers={"X-Riot-Token": self.token})
+        summoner_puuid = summoner_dict['puuid']
+        summoner_name = summoner_dict['name']
+        url = f'https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{summoner_puuid}/ids?type=ranked&start=0&count=10'
+        r = await self.league_api_request(url)
 
         if r[0] != 200:
             return await ctx.send(f'No2: {r[0]}')
@@ -104,9 +143,8 @@ class League(Cog):
         match_ids = r[1]
 
         for match_id in match_ids:
-            r = await async_request.request(
-                f'https://americas.api.riotgames.com/lol/match/v5/matches/{match_id}',
-                headers={"X-Riot-Token": self.token})
+            url = f'https://americas.api.riotgames.com/lol/match/v5/matches/{match_id}'
+            r = await self.league_api_request(url)
 
             if r[0] != 200:
                 return await ctx.send(f'No3: {r[0]}')
@@ -143,22 +181,13 @@ class League(Cog):
         if summoner_name is None or summoner_name == '':
             return await ctx.send("You need to type your league name silly goose!")
 
-        r = await async_request.request(
-            f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}',
-            headers={"X-Riot-Token": self.token})
+        status_code, summoner_dict = await self.summoner_name_request(ctx, summoner_name)
 
-        status_code = r[0]
         if status_code != 200:
-            if status_code == 404:
-                return await ctx.send(f"The summoner name `{summoner_name}` does not exist!!")
+            return
 
-            elif status_code == 403:
-                return await ctx.send(self.expired)
-
-            return await ctx.send(f'Error Code: {status_code}')
-
-        summoner_name = r[1]['name']
-        summoner_id = r[1]['id']
+        summoner_name = summoner_dict['name']
+        summoner_id = summoner_dict['id']
 
         with open('storage/league.json', 'w') as f:
             persons_id = str(ctx.author.id)
@@ -177,7 +206,7 @@ class League(Cog):
 
     @commands.command(name='mastery', aliases=['m', 'M', 'chest'])
     async def mastery(self, ctx, *args, ff=False):
-        """Returns mastery level + chest availability for specific champion for an account."""
+        """Returns mastery level + chest availability for specific champion."""
 
         champion = await self.parse_champion_input(args)
         champion_color = int(self.champion_info[champion]['COLOR'], 16)
@@ -261,17 +290,17 @@ class League(Cog):
 
         return await ctx.send(embed=embed_msg)
 
-    @commands.command(name='ci')
+    @commands.command(name='ci', hidden=True)
     async def champion_information(self, ctx):
         if str(ctx.author.top_role) != 'Admins':
             return await ctx.send('Why do you even want this')
 
         return await ctx.send(content='Here you go!!', file=discord.File('storage/champion_info.json'))
 
-    @commands.command(name='color', aliases=['colour'])
+    @commands.command(name='color', aliases=['colour'], hidden=True)
     async def color(self, ctx, *args):
-        if ctx.author.id != self.bot.settings.moist_id:
-            return
+        if self._check_if_not_moist(ctx):
+            return await ctx.send('You are not allowed to do that')
 
         champion = await self.parse_champion_input([args[0]])
         try:
@@ -310,7 +339,7 @@ class League(Cog):
                            f'`y` or `n`')
             msg = await self.bot.wait_for('message',
                                           check=lambda message: message.author == ctx.author and
-                                          message.channel.id == ctx.channel.id, timeout=10)
+                                                                message.channel.id == ctx.channel.id, timeout=10)
 
         except asyncio.exceptions.TimeoutError:
             return await ctx.send('TOO SLOW')
@@ -321,8 +350,11 @@ class League(Cog):
         else:
             return await ctx.send('Color has not been changed')
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def match(self, ctx, *args):
+        if self._check_if_not_moist(ctx):
+            return await ctx.send('You are not allowed to do that')
+
         try:
             match_id = ("".join(args).strip())
 
@@ -331,7 +363,7 @@ class League(Cog):
 
         url = f"https://americas.api.riotgames.com/lol/match/v5/matches/{match_id}"
 
-        r = await async_request.request(url, headers={"X-Riot-Token": self.token})
+        r = await self.league_api_request(url)
 
         status_code = r[0]
 
@@ -342,22 +374,10 @@ class League(Cog):
         with open(file_location, "w") as f:
             json.dump(r[1], f, indent=2)
 
-    async def id(self, summoner_name):
-        r = await async_request.request(
-            f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}',
-            headers={"X-Riot-Token": self.token})
-
-        status_code = r[0]
-        if status_code != 200:
-            return status_code, None, None
-
-        return status_code, r[1]['id'], r[1]['name']
-
     async def mastery_request(self, summoner_id, champion_id):
-        r = await async_request.request(
-            f'https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-summoner/'
-            f'{summoner_id}/by-champion/{champion_id}',
-            headers={"X-Riot-Token": self.token})
+        url = f'https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-summoner/{summoner_id}/by-champion/{champion_id}'
+
+        r = await self.league_api_request(url)
 
         status_code = r[0]
         if status_code != 200:
@@ -365,9 +385,29 @@ class League(Cog):
 
         return status_code, r[1]
 
+    async def league_api_request(self, url):
+        return await async_request.request(url, headers={"X-Riot-Token": self.token})
+
+    async def summoner_name_request(self, ctx, summoner_name):
+        url = f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}'
+        r = await self.league_api_request(url)
+
+        status_code = r[0]
+        if status_code != 200:
+            msg = f'Error Code: {status_code}'
+            if status_code == 404:
+                msg = f"The summoner name `{summoner_name}` does not exist!!"
+
+            elif status_code == 403:
+                msg = self.expired
+
+            await ctx.send(msg)
+
+            return status_code, None
+
+        return status_code, r[1]
+
     async def parse_champion_input(self, raw_input):
-        # Parses input
-        # example input: !mastery urgot
         champion = ' '.join(raw_input).title()
 
         distances = []
@@ -384,6 +424,24 @@ class League(Cog):
 
         # try to remember what this does JOSE - past jose
         return sorted(distances, key=lambda x: x[1])[0][0]
+
+    async def get_summoner(self, ctx):
+        summoner_name = None
+        summoner_id = None
+
+        try:
+            # pycharm was giving moist annoying warnings these comments got rid of them
+            # Expected type 'Union[int, slice]', got 'str' instead
+
+            # noinspection PyTypeChecker
+            summoner_name = league_dict['users'][str(ctx.author.id)]['summoner name']
+            # noinspection PyTypeChecker
+            summoner_id = league_dict['users'][str(ctx.author.id)]['summoner id']
+            return summoner_name, summoner_id
+
+        except KeyError:
+            await ctx.send(f'Please set your league account with !summoner')
+            return summoner_name, summoner_id
 
 
 async def setup(bot):

@@ -1,5 +1,4 @@
 import logging
-import nacl
 
 from discord import Intents, LoginFailure, PrivilegedIntentsRequired, utils
 from util.patronus_bot import PatronusBot

@@ -23,12 +23,12 @@ class Admin(commands.Cog):
         python = sys.executable
         os.execl(python, python, *sys.argv)
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def restart(self, ctx):
         await ctx.send("Restarting bot...")
         self.restart_program()
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def reload(self, ctx, message):
         try:
             await self.bot.unload_extension(f"cogs.{message}")
@@ -39,7 +39,7 @@ class Admin(commands.Cog):
             print(e)
             await ctx.send(f"{message} cog has failed to be reloaded :(")
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def update(self, ctx):
         repository_url = "https://github.com/moist-sock/moist-patronus"
 
