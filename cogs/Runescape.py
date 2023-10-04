@@ -30,10 +30,28 @@ class Runescape(commands.Cog):
         with open('storage/league.json', 'r') as f:
             self.gamer_dict = json.load(f)
 
-    @commands.command(aliases=["drycalc"])
-    async def dry_calculator(self, ctx, current_kc, rate):
-        pass
+    @commands.command(aliases=["drycalc", "dry"])
+    async def dry_calculator(self, ctx, *args):
 
+        try:
+            current_kc = int(args[0])
+            rate = args[1]
+
+        except (ValueError, IndexError):
+            return await ctx.send("Error! example usage would be...\n"
+                                  "!dry kc rate\n"
+                                  "!dry 10 1/100")
+
+        try:
+            decimal_rate = eval(rate)  # Evaluate the rate string (e.g., "1/10" becomes 0.1)
+
+        except ZeroDivisionError:
+            return await ctx.send("Why divide by zero")
+
+        # Calculate the probability
+        probability = 1 - (1 - decimal_rate) ** current_kc
+
+        return await ctx.send(probability)
 
     @commands.command()
     async def max(self, ctx, *date):

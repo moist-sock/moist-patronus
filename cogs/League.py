@@ -46,6 +46,10 @@ class League(Cog):
         return ctx.author.id != self.bot.settings.moist_id and ctx.author.id != 765451755332304927
 
     @commands.command()
+    async def test(self, ctx):
+        pass
+
+    @commands.command()
     async def rank(self, ctx, *args):
         summoner_name = " ".join(args)
 
@@ -64,28 +68,24 @@ class League(Cog):
         if summoner_name is None:
             return
 
-        url = f"https://na1.api.riotgames.com/lol/league/v4/entries/by-summoner/{summoner_id}"
+        status_code, summoner_rank_dict = await self.get_rank(summoner_id)
 
-        r = await self.league_api_request(url)
-
-        if r[0] != 200:
-            print(f"error {r[0]}: !rank command")
+        if status_code != 200:
+            print(f"error {status_code}: !rank command")
             return
 
-        rank_list = r[1]
-
-        if not rank_list:
+        if not summoner_rank_dict:
             return await ctx.send("This account is not ranked")
 
         try:
-            if rank_list[1]["queueType"] == "RANKED_SOLO_5x5":
-                rank_dict = rank_list[ranked_solo]
+            if summoner_rank_dict[1]["queueType"] == "RANKED_SOLO_5x5":
+                rank_dict = summoner_rank_dict[ranked_solo]
 
             else:
-                rank_dict = rank_list[not ranked_solo]
+                rank_dict = summoner_rank_dict[not ranked_solo]
 
         except IndexError:
-            rank_dict = rank_list[0]
+            rank_dict = summoner_rank_dict[0]
             if rank_dict['queueType'] != queues[ranked_solo]:
                 return await ctx.send("not ranked!")
 
@@ -443,6 +443,10 @@ class League(Cog):
             await ctx.send(f'Please set your league account with !summoner')
             return summoner_name, summoner_id
 
+    async def get_rank(self, summoner_id):
+        url = f"https://na1.api.riotgames.com/lol/league/v4/entries/by-summoner/{summoner_id}"
+        status_code, summoner_rank_dict =  await self.league_api_request(url)
+        return status_code, summoner_rank_dict
 
 async def setup(bot):
     await bot.add_cog(League(bot))

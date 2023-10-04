@@ -1,4 +1,22 @@
-WARNING    - 2023-10-01 18:59:08,253 - client          : PyNaCl is not installed, voice will NOT be supported
-INFO       - 2023-10-01 18:59:08,256 - client          : logging in using static token
-INFO       - 2023-10-01 18:59:09,207 - gateway         : Shard ID None has connected to Gateway (Session ID: 3c520c8a721314e71798c5ccc0be3061).
-INFO       - 2023-10-01 19:25:58,039 - gateway         : Shard ID None has successfully RESUMED session 3c520c8a721314e71798c5ccc0be3061.
+WARNING    - 2023-10-03 02:27:05,959 - client          : PyNaCl is not installed, voice will NOT be supported
+INFO       - 2023-10-03 02:27:05,961 - client          : logging in using static token
+INFO       - 2023-10-03 02:27:06,829 - gateway         : Shard ID None has connected to Gateway (Session ID: 7b6cbdcbf12b6f94e0917fda2155f9ca).
+INFO       - 2023-10-03 04:04:42,533 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 05:39:58,520 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 07:54:05,060 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 10:55:40,490 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 11:33:52,744 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 12:19:46,100 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 13:46:37,938 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 13:59:18,620 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 15:02:47,962 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 16:21:44,327 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 17:26:40,960 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 20:18:25,424 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-03 23:31:12,640 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-04 02:40:17,265 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-04 06:32:22,205 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-04 10:22:50,656 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-04 11:04:42,448 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-04 11:42:31,507 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
+INFO       - 2023-10-04 12:12:35,822 - gateway         : Shard ID None has successfully RESUMED session 7b6cbdcbf12b6f94e0917fda2155f9ca.
