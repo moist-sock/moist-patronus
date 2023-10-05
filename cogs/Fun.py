@@ -1,3 +1,6 @@
+import logging
+import os
+
 from discord.ext import commands
 
 
@@ -10,6 +13,20 @@ class Fun(commands.Cog):
         if isinstance(error, commands.CommandNotFound):
             # message = str(ctx.message.content).lower()
             return
+        logging.error(error)
+
+    @commands.command(aliases=["find"], hidden=True)
+    async def find_json_files(self, ctx):
+        base_directory = r"C:\Users\duke\Documents\GitHub\moist-patronus"
+        for root, dirs, files in os.walk(base_directory):
+            if "site-packages" in root:
+                continue
+            for filename in files:
+                # Check if the file has a .json extension
+                if filename.endswith('.json') or filename.endswith('.txt'):
+                    # Print the full path to the JSON file
+                    json_file_path = os.path.join(root, filename)
+                    print(json_file_path)
 
 
 async def setup(bot):

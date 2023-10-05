@@ -1,21 +1,23 @@
 import asyncio
 import json
-from datetime import datetime
+import textdistance
 
+from datetime import datetime
+from math import log, ceil
 from discord import Embed
 from discord.ext import commands
 from osrs.hiscores_stuff.hiscores import get_boss_kc, get_stats
 from osrs.spreadsheets.google_sheet_inputter import inputter
+from osrs.xp import xp_dict
 from osrs.hiscores_stuff.boss_name_getter import main as boss_name
 from util.attachment_reader import ctx_attachment_reader as reader
 from util.time_functions import run_daily_task
-from osrs.xp import xp_dict
-import textdistance
 
 
 class NoName(Exception):
     async def message(self, ctx, sep):
-        await ctx.send(f"Either add your account to the bot with !osrs or add '{sep} (account name)' after the first input")
+        await ctx.send(
+            f"Either add your account to the bot with !osrs or add '{sep} (account name)' after the first input")
 
 
 class Runescape(commands.Cog):
@@ -29,6 +31,54 @@ class Runescape(commands.Cog):
 
         with open('storage/league.json', 'r') as f:
             self.gamer_dict = json.load(f)
+
+    @commands.command()
+    async def funbox(self, ctx):
+        return await ctx.send(
+            '[{"regionId":15184,"regionX":26,"regionY":42,"z":1,"color":"#FFFFFF00"},{"regionId":15184,"regionX":24,"regionY":40,"z":1,"color":"#FFFFFF00"},{"regionId":15184,"regionX":23,"regionY":39,"z":1,"color":"#FF3AFF20"},{"regionId":15184,"regionX":26,"regionY":39,"z":1,"color":"#FF3AFF20"},{"regionId":15184,"regionX":29,"regionY":39,"z":1,"color":"#FF3AFF20"},{"regionId":15184,"regionX":29,"regionY":42,"z":1,"color":"#FF3AFF20"},{"regionId":15184,"regionX":29,"regionY":45,"z":1,"color":"#FF3AFF20"},{"regionId":15184,"regionX":26,"regionY":45,"z":1,"color":"#FF3AFF20"},{"regionId":15184,"regionX":23,"regionY":45,"z":1,"color":"#FF3AFF20"},{"regionId":15184,"regionX":23,"regionY":42,"z":1,"color":"#FF3AFF20"},{"regionId":15696,"regionX":32,"regionY":42,"z":1,"color":"#FFFFFF00"},{"regionId":15696,"regionX":37,"regionY":45,"z":1,"color":"#FFFF0000"},{"regionId":15696,"regionX":37,"regionY":44,"z":1,"color":"#FFFF0000"},{"regionId":15696,"regionX":37,"regionY":43,"z":1,"color":"#FFFF0000"},{"regionId":15696,"regionX":37,"regionY":42,"z":1,"color":"#FFFF0000"},{"regionId":15696,"regionX":37,"regionY":41,"z":1,"color":"#FFFF0000"},{"regionId":15696,"regionX":27,"regionY":45,"z":1,"color":"#FFFF0000"},{"regionId":15696,"regionX":27,"regionY":44,"z":1,"color":"#FFFF0000"},{"regionId":15696,"regionX":27,"regionY":43,"z":1,"color":"#FFFF0000"},{"regionId":15696,"regionX":27,"regionY":42,"z":1,"color":"#FFFF0000"},{"regionId":15696,"regionX":27,"regionY":41,"z":1,"color":"#FFFF0000"}]')
+
+    @commands.command(aliases=["next"], hidden=True)
+    async def next_level(self, ctx, *args):
+        try:
+            gamer, info = self.parse_input(ctx, args)
+
+        except NoName:
+            return await NoName.message(NoName(), ctx, self.seperator)
+
+        print(type(info))
+
+    @commands.command(aliases=["when"])
+    async def when_calculator(self, ctx,
+                              percent: str = commands.parameter(description="Percent as a whole number"),
+                              rate: str = commands.parameter(description="Drop rate as a fraction")):
+        """
+        Sends the kc needed to reach the inputted percent chance for the inputted drop rate
+        """
+        try:
+            if len(percent) <= 2:
+                divide_by = 100
+
+            else:
+                divide_by = 10 ** (len(percent))
+
+            probability = float(percent) / divide_by
+
+        except (ValueError, IndexError):
+            return await ctx.send("Error! example usage would be...\n"
+                                  "!when percent rate\n"
+                                  "!when 50 1/300")
+
+        try:
+            decimal_rate = eval(rate)  # Evaluate the rate string (e.g., "1/10" becomes 0.1)
+
+        except ZeroDivisionError:
+            return await ctx.send("Why divide by zero")
+
+        kc_needed = log(1 - probability) / log(1 - decimal_rate)
+
+        msg = f"{ceil(kc_needed)} kc for {probability * 100}% chance"
+
+        return await ctx.send(msg)
 
     @commands.command(aliases=["drycalc", "dry"])
     async def dry_calculator(self, ctx, *args):
@@ -68,6 +118,7 @@ class Runescape(commands.Cog):
 
         except ValueError:
             return await ctx.send("Bad date format - example format 'jan 1 2024'")
+
         days_til = date_object - datetime.utcnow()
         days_til = int(str(days_til.days))
         days_til += 1
