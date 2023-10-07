@@ -1,13 +1,7 @@
-WARNING    - 2023-10-05 02:24:16,781 - client          : PyNaCl is not installed, voice will NOT be supported
-INFO       - 2023-10-05 02:24:16,783 - client          : logging in using static token
-INFO       - 2023-10-05 02:24:17,683 - gateway         : Shard ID None has connected to Gateway (Session ID: b2c9f4bdda290f250a9933e24d4e57ee).
-INFO       - 2023-10-05 03:02:01,237 - gateway         : Shard ID None has successfully RESUMED session b2c9f4bdda290f250a9933e24d4e57ee.
-INFO       - 2023-10-05 04:29:52,357 - gateway         : Shard ID None has successfully RESUMED session b2c9f4bdda290f250a9933e24d4e57ee.
-INFO       - 2023-10-05 05:28:39,765 - gateway         : Shard ID None has successfully RESUMED session b2c9f4bdda290f250a9933e24d4e57ee.
-INFO       - 2023-10-05 07:07:04,700 - gateway         : Shard ID None has successfully RESUMED session b2c9f4bdda290f250a9933e24d4e57ee.
-INFO       - 2023-10-05 08:42:22,258 - gateway         : Shard ID None has successfully RESUMED session b2c9f4bdda290f250a9933e24d4e57ee.
-INFO       - 2023-10-05 10:21:13,805 - gateway         : Shard ID None has successfully RESUMED session b2c9f4bdda290f250a9933e24d4e57ee.
-INFO       - 2023-10-05 11:02:24,143 - gateway         : Shard ID None has successfully RESUMED session b2c9f4bdda290f250a9933e24d4e57ee.
-INFO       - 2023-10-05 11:39:07,653 - gateway         : Shard ID None has successfully RESUMED session b2c9f4bdda290f250a9933e24d4e57ee.
-INFO       - 2023-10-05 13:54:51,481 - gateway         : Shard ID None has successfully RESUMED session b2c9f4bdda290f250a9933e24d4e57ee.
-INFO       - 2023-10-05 15:46:16,765 - gateway         : Shard ID None has successfully RESUMED session b2c9f4bdda290f250a9933e24d4e57ee.
+WARNING    - 2023-10-06 18:21:04,763 - client          : PyNaCl is not installed, voice will NOT be supported
+INFO       - 2023-10-06 18:21:04,767 - client          : logging in using static token
+INFO       - 2023-10-06 18:21:05,723 - gateway         : Shard ID None has connected to Gateway (Session ID: fa3807d59e6eda497d27d1f6ff597004).
+INFO       - 2023-10-06 20:48:12,817 - gateway         : Shard ID None has successfully RESUMED session fa3807d59e6eda497d27d1f6ff597004.
+INFO       - 2023-10-06 22:46:09,781 - gateway         : Shard ID None has successfully RESUMED session fa3807d59e6eda497d27d1f6ff597004.
+INFO       - 2023-10-07 02:36:18,063 - gateway         : Shard ID None has successfully RESUMED session fa3807d59e6eda497d27d1f6ff597004.
+INFO       - 2023-10-07 03:58:45,161 - gateway         : Shard ID None has successfully RESUMED session fa3807d59e6eda497d27d1f6ff597004.

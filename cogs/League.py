@@ -445,7 +445,7 @@ class League(Cog):
 
     async def get_rank(self, summoner_id):
         url = f"https://na1.api.riotgames.com/lol/league/v4/entries/by-summoner/{summoner_id}"
-        status_code, summoner_rank_dict =  await self.league_api_request(url)
+        status_code, summoner_rank_dict = await self.league_api_request(url)
         return status_code, summoner_rank_dict
 
 async def setup(bot):

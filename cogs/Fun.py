@@ -13,7 +13,7 @@ class Fun(commands.Cog):
         if isinstance(error, commands.CommandNotFound):
             # message = str(ctx.message.content).lower()
             return
-        logging.error(error)
+        raise error
 
     @commands.command(aliases=["find"], hidden=True)
     async def find_json_files(self, ctx):
