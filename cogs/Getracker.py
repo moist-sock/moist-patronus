@@ -23,7 +23,7 @@ class Getracker(commands.Cog):
     async def ge_api_request(self, url):
         return await request(url, headers=self.headers)
 
-    @commands.command()
+    @commands.command(aliases=['p'])
     async def price(self, ctx, *args):
         item_name = " ".join(args)
         distances = []
@@ -54,10 +54,10 @@ class Getracker(commands.Cog):
 
         embed_msg.set_thumbnail(url=f"https://oldschool.runescape.wiki/images/{item_name.replace(' ', '_')}_detail.png")
         embed_msg.add_field(name="Price high", value=f"{price_dict['high']:,}")
-        embed_msg.add_field(name=f"Last insta sell", value=f"{lowtime}")
+        embed_msg.add_field(name=f"Last insta buy", value=f"{hightime}")
         embed_msg.add_field(name="\u200b", value='\u200b', inline=False)
         embed_msg.add_field(name="Price low", value=f"{price_dict['low']:,}")
-        embed_msg.add_field(name=f"Last insta buy", value=f"{hightime}")
+        embed_msg.add_field(name=f"Last insta sell", value=f"{lowtime}")
 
         return await ctx.send(embed=embed_msg)
 

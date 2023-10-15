@@ -1,7 +1,42 @@
-WARNING    - 2023-10-06 18:21:04,763 - client          : PyNaCl is not installed, voice will NOT be supported
-INFO       - 2023-10-06 18:21:04,767 - client          : logging in using static token
-INFO       - 2023-10-06 18:21:05,723 - gateway         : Shard ID None has connected to Gateway (Session ID: fa3807d59e6eda497d27d1f6ff597004).
-INFO       - 2023-10-06 20:48:12,817 - gateway         : Shard ID None has successfully RESUMED session fa3807d59e6eda497d27d1f6ff597004.
-INFO       - 2023-10-06 22:46:09,781 - gateway         : Shard ID None has successfully RESUMED session fa3807d59e6eda497d27d1f6ff597004.
-INFO       - 2023-10-07 02:36:18,063 - gateway         : Shard ID None has successfully RESUMED session fa3807d59e6eda497d27d1f6ff597004.
-INFO       - 2023-10-07 03:58:45,161 - gateway         : Shard ID None has successfully RESUMED session fa3807d59e6eda497d27d1f6ff597004.
+WARNING    - 2023-10-12 18:58:01,996 - client          : PyNaCl is not installed, voice will NOT be supported
+INFO       - 2023-10-12 18:58:02,006 - client          : logging in using static token
+INFO       - 2023-10-12 18:58:03,170 - gateway         : Shard ID None has connected to Gateway (Session ID: ea6bb67f55a2bb5225aa3ecba7ebd113).
+INFO       - 2023-10-12 19:55:10,128 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-12 22:36:47,381 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-12 23:29:44,225 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 01:15:11,309 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 01:33:38,559 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 04:45:36,632 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 06:22:03,171 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 06:52:41,573 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 07:18:33,899 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 09:40:43,073 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 10:21:35,939 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 10:51:52,516 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 11:44:43,999 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 12:38:32,248 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 13:05:59,223 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 13:39:43,435 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 13:49:51,551 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 14:10:44,350 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 15:28:48,080 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 16:13:18,492 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 16:18:54,857 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 19:35:26,392 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 21:55:06,237 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-13 23:53:35,873 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 02:16:40,083 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 02:51:11,649 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 03:35:22,413 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 05:04:52,501 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 05:25:41,595 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 08:45:10,242 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 09:10:41,981 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 09:34:06,559 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 09:36:48,041 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 10:42:51,551 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 13:47:15,919 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 15:00:21,715 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 17:07:34,804 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 17:57:40,490 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.
+INFO       - 2023-10-14 21:31:49,329 - gateway         : Shard ID None has successfully RESUMED session ea6bb67f55a2bb5225aa3ecba7ebd113.

@@ -19,6 +19,14 @@ class Admin(commands.Cog):
         sys.stdout = open('logs/logs.txt', 'a')
         sys.stderr = sys.stdout"""
 
+    def restart_program2(self):
+        command_string = "python main2.py > output.txt 2>&1"
+        try:
+            result = subprocess.run(command_string, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return result.returncode, result.stdout, result.stderr
+        except Exception as e:
+            return -1, None, str(e)
+
     def restart_program(self):
         python = sys.executable
         os.execl(python, python, *sys.argv)
@@ -26,7 +34,7 @@ class Admin(commands.Cog):
     @commands.command(hidden=True)
     async def restart(self, ctx):
         await ctx.send("Restarting bot...")
-        self.restart_program()
+        self.restart_program2()
 
     @commands.command(hidden=True)
     async def reload(self, ctx, message):

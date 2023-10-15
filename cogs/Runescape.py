@@ -250,7 +250,8 @@ class Runescape(commands.Cog):
         await self.bot.wait_until_ready()
         while self is self.bot.get_cog('Runescape'):
             await run_daily_task('08:00:00')
-            await self.bot.get_user(self.bot.settings.moist_id).send("I am gonna update the spreadsheets now :D")
+            await self.bot.get_user(self.bot.settings.moist_id).send("Good morning!!\nI am gonna update the spreadsheets now :D")
+            await self.bot.get_user(self.bot.settings.sarah_id).send("Good morning!!\nI am gonna update the spreadsheets now :D")
             await self.run_spreadsheets()
 
     async def run_spreadsheets(self):

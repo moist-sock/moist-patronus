@@ -7,6 +7,8 @@ class Settings:
     def __init__(self):
         self.moist_id = 272945366029172748
 
+        self.sarah_id = 765451755332304927
+
         self.BASE_DIR = pathlib.Path(__file__).parent.parent
 
         self.COGS_DIR = self.BASE_DIR / "cogs"
