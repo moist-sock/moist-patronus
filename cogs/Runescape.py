@@ -12,6 +12,9 @@ from osrs.xp import xp_dict
 from osrs.hiscores_stuff.boss_name_getter import main as boss_name
 from util.attachment_reader import ctx_attachment_reader as reader
 from util.time_functions import run_daily_task
+from util.async_request import request
+from bs4 import BeautifulSoup
+from util.store_test_json import store_test
 
 
 class NoName(Exception):
@@ -24,6 +27,7 @@ class Runescape(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.spreadsheet = asyncio.create_task(self.spreadsheet_loop())
+        self.news_loop_check = asyncio.create_task(self.news_loop())
         self.seperator = "/"
 
         with open("storage/osrs_bosses.json", "r") as f:
@@ -31,6 +35,15 @@ class Runescape(commands.Cog):
 
         with open('storage/league.json', 'r') as f:
             self.gamer_dict = json.load(f)
+
+        try:
+            with open("storage/osrs_news.json", "r") as f:
+                self.news = json.load(f)
+
+        except FileNotFoundError:
+            with open("storage/osrs_news.json", "w") as f:
+                json.dump([], f, indent=1)
+                self.news = []
 
     @commands.command()
     async def funbox(self, ctx):
@@ -134,7 +147,15 @@ class Runescape(commands.Cog):
         for stat in stats_dict:
             if stats_dict[stat]["level"] >= 99:
                 continue
-            stat_xp = int((xp_dict["99"] - stats_dict[stat]["xp"]) / days_til) + 1
+            try:
+                stat_xp = int((xp_dict["99"] - stats_dict[stat]["xp"]) / days_til) + 1
+
+            except ZeroDivisionError:
+                return await ctx.send("pick a date in the future")
+
+            if stat_xp < 0:
+                return await ctx.send("pick a date in the future")
+
             total_xp += stat_xp
             xp_a_day[stat] = stat_xp
 
@@ -207,6 +228,70 @@ class Runescape(commands.Cog):
 
         return await ctx.send(embed=embed_msg)
 
+    @commands.command(aliases=["boss"], hidden=True)
+    async def manually_update_boss_name(self, ctx):
+        await boss_name()
+        return await ctx.send("All done!")
+
+    @commands.command(aliases=["spread"], hidden=True)
+    async def manually_update_spreadsheet(self, ctx):
+        await self.run_spreadsheets()
+        return await ctx.send("All done!")
+
+    @commands.command(hidden=True)
+    async def check(self, ctx):
+        spread_loop = "on"
+        news_loop = "on"
+        if self.spreadsheet.done():
+            spread_loop = "off"
+        if self.news_loop_check.done():
+            news_loop = "off"
+
+        await ctx.send(f"spreadsheet loop is {spread_loop}\n"
+                       f"news post loop is {news_loop}")
+
+    async def news_post(self):
+        current_date = datetime.now()
+        year = current_date.year
+        month = current_date.month
+        url = f"https://secure.runescape.com/m=news/archive?oldschool=1&year={year}&month={month}"
+        status, html = await request(url)
+
+        if status != 200:
+            print("error in news_post", status)
+
+        soup = BeautifulSoup(html, "html.parser")
+        for link in soup.find_all('a'):
+            link = link.get('href')
+            if not self.news_link(link) or link in self.news:
+                continue
+
+            self.news.append(link)
+            with open("storage/osrs_news.json", "w") as f:
+                json.dump(self.news, f, indent=1)
+
+            real_id = 1164047806806360114
+            test_id = 965680218826227812
+            await self.bot.get_channel(real_id).send(link)
+            await self.bot.get_user(self.bot.settings.moist_id).send(f"new news post!!\n"
+                                                                     f"{link}")
+
+    def news_link(self, url):
+        is_link = True
+        if "https://secure.runescape.com/m=news/" not in url:
+            is_link = False
+
+        elif "1&year" in url:
+            is_link = False
+
+        elif "latest_news.rss?oldschool=true" in url:
+            is_link = False
+
+        elif "cat=" in url:
+            is_link = False
+
+        return is_link
+
     def parse_input(self, ctx, args):
         raw_info = " ".join(args)
         gamer = None
@@ -229,23 +314,6 @@ class Runescape(commands.Cog):
 
         return gamer, data2
 
-    @commands.command(aliases=["boss"], hidden=True)
-    async def manually_update_boss_name(self, ctx):
-        await boss_name()
-        return await ctx.send("All done!")
-
-    @commands.command(aliases=["spread"], hidden=True)
-    async def manually_update_spreadsheet(self, ctx):
-        await self.run_spreadsheets()
-        return await ctx.send("All done!")
-
-    @commands.command(hidden=True)
-    async def check(self, ctx):
-        loop = "on"
-        if self.spreadsheet.done():
-            loop = "off"
-        await ctx.send(f"spreadsheet loop is {loop}")
-
     async def spreadsheet_loop(self):
         await self.bot.wait_until_ready()
         while self is self.bot.get_cog('Runescape'):
@@ -253,6 +321,12 @@ class Runescape(commands.Cog):
             await self.bot.get_user(self.bot.settings.moist_id).send("Good morning!!\nI am gonna update the spreadsheets now :D")
             await self.bot.get_user(self.bot.settings.sarah_id).send("Good morning!!\nI am gonna update the spreadsheets now :D")
             await self.run_spreadsheets()
+
+    async def news_loop(self):
+        await self.bot.wait_until_ready()
+        while self is self.bot.get_cog('Runescape'):
+            await self.news_post()
+            await asyncio.sleep(60)
 
     async def run_spreadsheets(self):
         await inputter("The Whisperer", "whisperer kc", compare_rank=1)
