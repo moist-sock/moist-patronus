@@ -272,9 +272,14 @@ class Runescape(commands.Cog):
 
             real_id = 1164047806806360114
             test_id = 965680218826227812
-            await self.bot.get_channel(real_id).send(link)
-            await self.bot.get_user(self.bot.settings.moist_id).send(f"new news post!!\n"
-                                                                     f"{link}")
+
+            status, embed = await self.news_post_embed(link)
+
+            if status != 200:
+                print("problem making news post embed", status)
+
+            await self.bot.get_channel(real_id).send(embed=embed)
+            await self.bot.get_user(self.bot.settings.moist_id).send(embed=embed)
 
     def news_link(self, url):
         is_link = True
@@ -314,6 +319,27 @@ class Runescape(commands.Cog):
 
         return gamer, data2
 
+    async def news_post_embed(self, url):
+        status, html = await request(url)
+
+        if status != 200:
+            return status, None
+
+        soup = BeautifulSoup(html, "html.parser")
+
+        title = soup.title.string
+        image_url = soup.find('img', {'alt': title, 'title': title})['src']
+
+        hyperlink = f"[Link to post]({url})"
+
+        embed = Embed(title=title,
+                      description=url)
+
+        embed.set_thumbnail(url="https://www.runescape.com/img/rsp777/social-share.jpg?1")
+        embed.set_image(url=image_url)
+
+        return status, embed
+
     async def spreadsheet_loop(self):
         await self.bot.wait_until_ready()
         while self is self.bot.get_cog('Runescape'):
@@ -326,7 +352,7 @@ class Runescape(commands.Cog):
         await self.bot.wait_until_ready()
         while self is self.bot.get_cog('Runescape'):
             await self.news_post()
-            await asyncio.sleep(60)
+            await asyncio.sleep(300)
 
     async def run_spreadsheets(self):
         await inputter("The Whisperer", "whisperer kc", compare_rank=1)
