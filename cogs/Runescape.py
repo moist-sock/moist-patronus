@@ -1,6 +1,7 @@
 import asyncio
 import json
 import textdistance
+import random
 
 from datetime import datetime
 from math import log, ceil
@@ -29,6 +30,42 @@ class Runescape(commands.Cog):
         self.spreadsheet = asyncio.create_task(self.spreadsheet_loop())
         self.news_loop_check = asyncio.create_task(self.news_loop())
         self.seperator = "/"
+
+        self.fake_bosses = [
+            "Deadman Points",
+            "Bounty Hunter - Hunter",
+            "Bounty Hunter - Rogue",
+            "Bounty Hunter (Legacy) - Hunter",
+            "Bounty Hunter (Legacy) - Rogue",
+            "Clue Scrolls (all)",
+            "Clue Scrolls (beginner)",
+            "Clue Scrolls (easy)",
+            "Clue Scrolls (medium)",
+            "Clue Scrolls (hard)",
+            "Clue Scrolls (elite)",
+            "Clue Scrolls (master)",
+            "LMS - Rank",
+            "PvP Arena - Rank",
+            "Soul Wars Zeal",
+            "Rifts closed",
+            "Tempoross",
+            "Wintertodt",
+            "Zalcano",
+            "The Gauntlet",
+            "The Corrupted Gauntlet"
+        ]
+        self.slayer_bosses = [
+            "Abyssal Sire",
+            "Alchemical Hydra",
+            "Bryophyta",
+            "Cerberus",
+            "Grotesque Guardians",
+            "Kraken",
+            "Mimic",
+            "Obor",
+            "Skotizo",
+            "Thermonuclear Smoke Devil"
+        ]
 
         with open("storage/osrs_bosses.json", "r") as f:
             self.boss_dict = json.load(f)
@@ -121,7 +158,7 @@ class Runescape(commands.Cog):
         """Returns xp needed a day to max on certain date"""
         # jan 1 2024
         try:
-            gamer, date = self.parse_input(ctx, date)
+            gamers, date = self.parse_input(ctx, date)
 
         except NoName:
             return await NoName.message(NoName(), ctx, self.seperator)
@@ -135,53 +172,60 @@ class Runescape(commands.Cog):
         days_til = date_object - datetime.utcnow()
         days_til = int(str(days_til.days))
         days_til += 1
+        for gamer in gamers:
+            status, stats_dict = await get_stats(gamer)
 
-        status, stats_dict = await get_stats(gamer)
+            if status != 200:
+                print(f"bad status error {status}")
+                return
 
-        if status != 200:
-            print(f"bad status error {status}")
-            return
+            xp_a_day = {}
+            total_xp = 0
+            for stat in stats_dict:
+                if stats_dict[stat]["level"] >= 99:
+                    continue
+                try:
+                    stat_xp = int((xp_dict["99"] - stats_dict[stat]["xp"]) / days_til) + 1
 
-        xp_a_day = {}
-        total_xp = 0
-        for stat in stats_dict:
-            if stats_dict[stat]["level"] >= 99:
-                continue
-            try:
-                stat_xp = int((xp_dict["99"] - stats_dict[stat]["xp"]) / days_til) + 1
+                except ZeroDivisionError:
+                    return await ctx.send("pick a date in the future")
 
-            except ZeroDivisionError:
-                return await ctx.send("pick a date in the future")
+                if stat_xp < 0:
+                    return await ctx.send("pick a date in the future")
 
-            if stat_xp < 0:
-                return await ctx.send("pick a date in the future")
+                total_xp += stat_xp
+                xp_a_day[stat] = stat_xp
 
-            total_xp += stat_xp
-            xp_a_day[stat] = stat_xp
+            xp_a_day["Total xp a day"] = total_xp
 
-        xp_a_day["Total xp a day"] = total_xp
+            embed_msg = Embed(title=f"{gamer} - max on {date}")
 
-        embed_msg = Embed(title=f"Xp a day needed to max on {date}")
+            for skill in xp_a_day:
+                embed_msg.add_field(name=skill, value=f"{xp_a_day[skill]:,}", inline=True)
 
-        for skill in xp_a_day:
-            embed_msg.add_field(name=skill, value=f"{xp_a_day[skill]:,}", inline=True)
+            await ctx.send(embed=embed_msg)
 
-        return await ctx.send(embed=embed_msg)
-
-    @commands.command()
+    @commands.group()
     async def osrs(self, ctx, *args):
         """Set osrs account"""
-        gamer = " ".join(args)
+        gamers = " ".join(args).split(",")
         gamers_id = str(ctx.author.id)
-
         user_dict = self.gamer_dict['users'].get(gamers_id, {})
-        user_dict['osrs'] = gamer
+
+        clean_gamers = []
+        for gamer in gamers:
+            if not gamer:
+                continue
+            clean_gamers.append(gamer.strip())
+
+        user_dict['osrs'] = clean_gamers
+
         self.gamer_dict['users'][gamers_id] = user_dict
 
         with open('storage/league.json', 'w') as f:
-            json.dump(self.gamer_dict, f, indent=2)
-
-        return await ctx.send(f"Osrs account `{gamer}` successfully added as your account")
+            json.dump(self.gamer_dict, f, indent=1)
+        acc = ['account', 'accounts'][len(clean_gamers) > 1]
+        return await ctx.send(f"Osrs {acc} `{'`, `'.join(clean_gamers)}` successfully set as your {acc}")
 
     @commands.command(aliases=['bj'], hidden=True)
     async def boss_json(self, ctx):
@@ -194,39 +238,49 @@ class Runescape(commands.Cog):
     @commands.command(aliases=['kc'])
     async def boss_kc(self, ctx, *args):
         try:
-            gamer, raw_boss = self.parse_input(ctx, args)
+            gamers, raw_boss = self.parse_input(ctx, args)
 
         except NoName:
             return await NoName.message(NoName(), ctx, self.seperator)
 
         boss = await self.boss_spell_check(raw_boss)
 
-        status, stats = await get_boss_kc(gamer)
+        if ctx.message.author.nick is not None:
+            title_name = ctx.message.author.nick
 
-        if status != 200:
-            return await ctx.send(f"User {gamer} does not exist")
-
-        try:
-            kc = stats[boss]['kc']
-            rank = f"{stats[boss]['rank']:,}"
-
-        except KeyError:
-            kc = 0
-            rank = "Unranked"
+        else:
+            title_name = ctx.message.author.name
 
         embed_msg = Embed(
-            title=f'{gamer} - {boss}',
+            title=f'{title_name} - {boss}',
             type='rich',
             description="",
             colour=self.boss_dict[boss]["COLOR"]
         )
 
-        # embed_msg.set_image(url=self.boss_dict[boss]["PNG"])
         embed_msg.set_thumbnail(url=self.boss_dict[boss]["PNG"])
-        embed_msg.add_field(name='Kill count', value=f"{kc:,}", inline=True)
-        embed_msg.add_field(name='Rank', value=rank, inline=True)
+        gamer_ranks = []
+        for gamer in gamers:
+            status, stats = await get_boss_kc(gamer)
 
-        return await ctx.send(embed=embed_msg)
+            if status != 200:
+                await ctx.send(f"User `{gamer}` does not exist")
+                continue
+
+            try:
+                kc = f"{stats[boss]['kc']:,}"
+                rank = int(stats[boss]['rank'])
+
+            except KeyError:
+                kc = 0
+                rank = "Unranked"
+            gamer_ranks.append([gamer, kc, rank])
+        gamer_ranks.sort(key=lambda x: x[2])
+        for gamer in gamer_ranks:
+
+            embed_msg.add_field(name=gamer[0], value=f"Kill count: {gamer[1]}, Rank: {gamer[2]:,}", inline=False)
+
+        await ctx.send(embed=embed_msg)
 
     @commands.command(aliases=["boss"], hidden=True)
     async def manually_update_boss_name(self, ctx):
@@ -250,6 +304,38 @@ class Runescape(commands.Cog):
         await ctx.send(f"spreadsheet loop is {spread_loop}\n"
                        f"news post loop is {news_loop}")
 
+    @commands.command()
+    async def ranboss(self, ctx):
+        bosses = list(self.boss_dict.keys())
+
+        for boss in self.fake_bosses:
+            bosses.remove(boss)
+
+        for boss in self.slayer_bosses:
+            bosses.remove(boss)
+
+        while bosses:
+            budget_boss = random.choice(bosses)
+
+            await ctx.send(f"Do a budget run for {budget_boss}")
+
+            try:
+                answer = await self.bot.wait_for('message',
+                                                 check=lambda message: message.author == ctx.author and
+                                                                       message.channel.id == ctx.channel.id,
+                                                 timeout=10)
+
+            except asyncio.exceptions.TimeoutError:
+                return await ctx.send("ok enjoy :)")
+
+            if answer.content == "no":
+                bosses.remove(budget_boss)
+
+            else:
+                return await ctx.send("ok enjoy :)")
+
+        return await ctx.send("okay you're being annoying goodbye")
+
     async def news_post(self):
         current_date = datetime.now()
         year = current_date.year
@@ -259,11 +345,12 @@ class Runescape(commands.Cog):
 
         if status != 200:
             print("error in news_post", status)
+            return
 
         soup = BeautifulSoup(html, "html.parser")
         for link in soup.find_all('a'):
             link = link.get('href')
-            if not self.news_link(link) or link in self.news:
+            if not self.this_is_a_news_link(link) or link in self.news:
                 continue
 
             self.news.append(link)
@@ -281,7 +368,7 @@ class Runescape(commands.Cog):
             await self.bot.get_channel(real_id).send(embed=embed)
             await self.bot.get_user(self.bot.settings.moist_id).send(embed=embed)
 
-    def news_link(self, url):
+    def this_is_a_news_link(self, url):
         is_link = True
         if "https://secure.runescape.com/m=news/" not in url:
             is_link = False
@@ -304,7 +391,7 @@ class Runescape(commands.Cog):
         try:
             dash_index = raw_info.index(self.seperator)
             data2 = raw_info[:dash_index].strip()
-            gamer = raw_info[dash_index + 2:].strip()
+            gamer = [raw_info[dash_index + 2:].strip()]
 
         except ValueError:
             data2 = raw_info
@@ -344,15 +431,17 @@ class Runescape(commands.Cog):
         await self.bot.wait_until_ready()
         while self is self.bot.get_cog('Runescape'):
             await run_daily_task('08:00:00')
-            await self.bot.get_user(self.bot.settings.moist_id).send("Good morning!!\nI am gonna update the spreadsheets now :D")
-            await self.bot.get_user(self.bot.settings.sarah_id).send("Good morning!!\nI am gonna update the spreadsheets now :D")
+            await self.bot.get_user(self.bot.settings.moist_id).send(
+                "Good morning!!\nI am gonna update the spreadsheets now :D")
+            await self.bot.get_user(self.bot.settings.sarah_id).send(
+                "Good morning!!\nI am gonna update the spreadsheets now :D")
             await self.run_spreadsheets()
 
     async def news_loop(self):
         await self.bot.wait_until_ready()
         while self is self.bot.get_cog('Runescape'):
             await self.news_post()
-            await asyncio.sleep(300)
+            await asyncio.sleep(600)
 
     async def run_spreadsheets(self):
         await inputter("The Whisperer", "whisperer kc", compare_rank=1)
