@@ -66,6 +66,30 @@ class Runescape(commands.Cog):
             "Skotizo",
             "Thermonuclear Smoke Devil"
         ]
+        self.skills = ['Overall',
+              'Attack',
+              'Defence',
+              'Strength',
+              'Hitpoints',
+              'Ranged',
+              'Prayer',
+              'Magic',
+              'Cooking',
+              'Woodcutting',
+              'Fletching',
+              'Fishing',
+              'Firemaking',
+              'Crafting',
+              'Smithing',
+              'Mining',
+              'Herblore',
+              'Agility',
+              'Thieving',
+              'Slayer',
+              'Farming',
+              'Runecraft',
+              'Hunter',
+              'Construction']
 
         with open("storage/osrs_bosses.json", "r") as f:
             self.boss_dict = json.load(f)
@@ -176,7 +200,8 @@ class Runescape(commands.Cog):
             status, stats_dict = await get_stats(gamer)
 
             if status != 200:
-                print(f"bad status error {status}")
+                print(f"Error in command !max: {status}\n"
+                      f"account - {gamer} -")
                 return
 
             xp_a_day = {}
@@ -268,17 +293,22 @@ class Runescape(commands.Cog):
                 continue
 
             try:
-                kc = f"{stats[boss]['kc']:,}"
-                rank = int(stats[boss]['rank'])
+                kc = int(stats[boss]['kc'])
+                rank = stats[boss]['rank']
 
             except KeyError:
                 kc = 0
                 rank = "Unranked"
             gamer_ranks.append([gamer, kc, rank])
-        gamer_ranks.sort(key=lambda x: x[2])
+        gamer_ranks.sort(key=lambda x: x[1], reverse=True)
         for gamer in gamer_ranks:
+            rank = gamer[2]
+            try:
+                rank = f"{rank:,}"
+            except ValueError:
+                pass
 
-            embed_msg.add_field(name=gamer[0], value=f"Kill count: {gamer[1]}, Rank: {gamer[2]:,}", inline=False)
+            embed_msg.add_field(name=gamer[0], value=f"Kill count: {gamer[1]:,}, Rank: {rank}", inline=False)
 
         await ctx.send(embed=embed_msg)
 
@@ -335,6 +365,49 @@ class Runescape(commands.Cog):
                 return await ctx.send("ok enjoy :)")
 
         return await ctx.send("okay you're being annoying goodbye")
+
+    @commands.command()
+    async def xp(self, ctx, *args):
+        try:
+            gamers, raw_skill = self.parse_input(ctx, args)
+
+        except NoName:
+            return await NoName.message(NoName(), ctx, self.seperator)
+
+        skill = await self.skill_spell_check(raw_skill)
+
+        embed_msg = Embed(
+            title=f'{skill}',
+            type='rich',
+            description=""
+        )
+        gamer_list = []
+        for gamer in gamers:
+            status, stats_dict = await get_stats(gamer)
+
+            if status != 200:
+                await ctx.send(f"couldnt get stats for `{gamer}`")
+                continue
+
+            try:
+                gamer_lvl = stats_dict[skill]['level']
+                gamer_xp = stats_dict[skill]['xp']
+
+            except KeyError:
+                gamer_lvl = 1
+                gamer_xp = 0
+
+            gamer_list.append([gamer, gamer_lvl, gamer_xp])
+
+        gamer_list.sort(key=lambda x: x[2], reverse=True)
+
+        total_xp = 0
+        for gamer in gamer_list:
+            total_xp += int(gamer[2])
+            embed_msg.add_field(name=gamer[0], value=f"Level: {gamer[1]}, Xp: {gamer[2]:,}", inline=False)
+
+        embed_msg.add_field(name="Total xp", value=f"{total_xp:,}", inline=False)
+        return await ctx.send(embed=embed_msg)
 
     async def news_post(self):
         current_date = datetime.now()
@@ -462,6 +535,15 @@ class Runescape(commands.Cog):
                         return real_boss
 
             distances.append([real_boss, textdistance.Levenshtein()(real_boss.lower(), boss)])
+
+        return sorted(distances, key=lambda x: x[1])[0][0]
+
+    async def skill_spell_check(self, skill):
+        distances = []
+
+        for real_skill in self.skills:
+
+            distances.append([real_skill, textdistance.Levenshtein()(real_skill.lower(), skill)])
 
         return sorted(distances, key=lambda x: x[1])[0][0]
 
