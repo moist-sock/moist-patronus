@@ -1,4 +1,5 @@
 import aiohttp
+from io import BytesIO
 
 
 async def request(url, ssl=True, **kwargs):
@@ -10,5 +11,9 @@ async def request(url, ssl=True, **kwargs):
             content_type = r.headers.get('Content-Type', '')
             if 'application/json' in content_type:
                 return r.status, await r.json()
+
+            if 'image/png' in content_type:
+                image_data = BytesIO(await r.read())
+                return r.status, image_data
 
             return r.status, await r.text()

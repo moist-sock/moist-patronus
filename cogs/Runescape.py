@@ -1,5 +1,7 @@
 import asyncio
 import json
+
+import discord
 import textdistance
 import random
 
@@ -15,6 +17,8 @@ from util.attachment_reader import ctx_attachment_reader as reader
 from util.time_functions import run_daily_task
 from util.async_request import request
 from bs4 import BeautifulSoup
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
 from util.store_test_json import store_test
 
 
@@ -408,6 +412,85 @@ class Runescape(commands.Cog):
 
         embed_msg.add_field(name="Total xp", value=f"{total_xp:,}", inline=False)
         return await ctx.send(embed=embed_msg)
+
+    @commands.command()
+    async def lookup(self, ctx, *args):
+        gamer = " ".join(args)
+
+        image_url = "https://cdn.discordapp.com/attachments/1156780650108555366/1169525486137913374/image.png?ex=6555b87c&is=6543437c&hm=bf8ad555ebfbabdaa99012f2a59ed519038a1b798dc5bf12cca1965d36fef83f&"
+        status, image_data = await request(image_url)
+
+        image = Image.open(image_data)
+        skills = ['Attack',
+                  'Hitpoints',
+                  'Mining',
+                  'Strength',
+                  'Agility',
+                  'Smithing',
+                  'Defence',
+                  'Herblore',
+                  'Fishing',
+                  'Ranged',
+                  'Thieving',
+                  'Cooking',
+                  'Prayer',
+                  'Crafting',
+                  'Firemaking',
+                  'Magic',
+                  'Fletching',
+                  'Woodcutting',
+                  'Runecraft',
+                  'Slayer',
+                  'Farming',
+                  'Construction',
+                  'Hunter']
+
+        status, stats = await get_stats(gamer)
+        if status != 200:
+            if status == 404:
+                return await ctx.send(f"could not find data for user {gamer}")
+            else:
+                print(f"error in !lookup\n"
+                      f"status code {status}")
+                return
+
+        draw = ImageDraw.Draw(image)
+
+        x_pos = 41
+        y_pos = 10
+        font_size = 20
+        font_level = ImageFont.load_default(font_size)
+        font_total_level = ImageFont.load_default(10)
+        text_color = (255, 255, 255)
+        total_level_color = (225, 232, 155)
+
+        count = 0
+        for next_row in range(8):
+            next_row *= 32
+            for next_column in range(3):
+                next_column *= 63
+                if next_row == 224 and next_column == 126:
+                    draw.text((153, 248), str(stats['Overall']['level']), fill=total_level_color, font=font_total_level)
+                    continue
+
+                try:
+                    number = str(stats[skills[count]]['level'])
+
+                except KeyError:
+                    number = '1'
+
+                if len(number) == 1:
+                    next_column += 7
+                draw.text((x_pos + next_column, y_pos + next_row), number, fill=text_color, font=font_level)
+                count += 1
+
+        with BytesIO() as image_binary:
+            image.save(image_binary, 'PNG')
+            image_binary.seek(0)
+            file = discord.File(image_binary, filename="image.png")
+
+        await ctx.send(file=file)
+
 
     async def news_post(self):
         current_date = datetime.now()
