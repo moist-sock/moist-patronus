@@ -4,6 +4,7 @@ import json
 import discord
 import textdistance
 import random
+import pathlib
 
 from datetime import datetime
 from math import log, ceil
@@ -109,6 +110,9 @@ class Runescape(commands.Cog):
             with open("storage/osrs_news.json", "w") as f:
                 json.dump([], f, indent=1)
                 self.news = []
+
+        with open("storage/osrs_items.json", "r") as f:
+            self.items = json.load(f)
 
     @commands.command()
     async def funbox(self, ctx):
@@ -448,7 +452,7 @@ class Runescape(commands.Cog):
         status, stats = await get_stats(gamer)
         if status != 200:
             if status == 404:
-                return await ctx.send(f"could not find data for user {gamer}")
+                return await ctx.send(f"could not find data for user `{gamer}`")
             else:
                 print(f"error in !lookup\n"
                       f"status code {status}")
@@ -461,16 +465,16 @@ class Runescape(commands.Cog):
         font_size = 20
         font_level = ImageFont.load_default(font_size)
         font_total_level = ImageFont.load_default(10)
-        text_color = (255, 255, 255)
         total_level_color = (225, 232, 155)
+        text_color = (255, 255, 255)
 
         count = 0
+        overall_number = 0
         for next_row in range(8):
             next_row *= 32
             for next_column in range(3):
                 next_column *= 63
                 if next_row == 224 and next_column == 126:
-                    draw.text((153, 248), str(stats['Overall']['level']), fill=total_level_color, font=font_total_level)
                     continue
 
                 try:
@@ -479,10 +483,23 @@ class Runescape(commands.Cog):
                 except KeyError:
                     number = '1'
 
+                    if skills[count] == "Hitpoints":
+                        number = '10'
+
                 if len(number) == 1:
                     next_column += 7
+
                 draw.text((x_pos + next_column, y_pos + next_row), number, fill=text_color, font=font_level)
                 count += 1
+                overall_number += int(number)
+
+        try:
+            overall_number = str(stats['Overall']['level'])
+
+        except KeyError:
+            overall_number = ">" + str(overall_number)
+
+        draw.text((153, 248), overall_number, fill=total_level_color, font=font_total_level)
 
         with BytesIO() as image_binary:
             image.save(image_binary, 'PNG')
@@ -491,6 +508,58 @@ class Runescape(commands.Cog):
 
         await ctx.send(file=file)
 
+    @commands.command()
+    async def who(self, ctx):
+        while True:
+            item_name = random.choice(list(self.items.keys()))
+            # item_name = "Ranarr seed"
+            url = f"https://oldschool.runescape.wiki/images/{item_name.replace(' ', '_')}_detail.png"
+
+            status, image_data = await request(url)
+
+            if status != 200:
+                if status == 404:
+                    continue
+
+                else:
+                    print(f"error in !who with item {item_name}\n"
+                          f"error code {status}")
+                    continue
+
+            else:
+                break
+
+        color_path = "storage/temp_file_name_color.png"
+        pathlib.Path(color_path).write_bytes(image_data.getbuffer().tobytes())
+        image = Image.open(image_data).convert("RGBA")
+
+        # Extract the alpha channel and threshold it at 200
+        alphaThresh = image.getchannel('A').point(lambda p: 255 if p > 127 else 0)
+
+        # Make a new completely black image same size as original
+        res = Image.new('RGB', image.size)
+
+        # Copy across the alpha channel from original
+        res.putalpha(alphaThresh)
+
+        with BytesIO() as image_binary:
+            res.save(image_binary, 'PNG')
+
+            black_path = "storage/temp_file_name.png"
+            pathlib.Path(black_path).write_bytes(image_binary.getbuffer().tobytes())
+
+        embed = Embed()
+        file = discord.File(black_path, filename="image.png")
+        embed.set_image(url=f"attachment://image.png")
+        msg = await ctx.send(embed=embed, file=file)
+
+        await asyncio.sleep(10)
+
+        new_embed = Embed(title=item_name)
+        new_file = discord.File(color_path, filename="image.png")
+        new_embed.set_image(url="attachment://image.png")
+
+        await msg.edit(embed=new_embed, attachments=[new_file])
 
     async def news_post(self):
         current_date = datetime.now()

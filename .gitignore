@@ -7,3 +7,7 @@ __pycache__/
 *.txt
 infos.log
 !requirements.txt
+storage/temp_file_name.png
+storage/temp_file_name_color.png
+storage/temp_file_name_color2.png
+*.png
