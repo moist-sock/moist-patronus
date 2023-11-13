@@ -45,10 +45,6 @@ class League(Cog):
         """Checks if the moist is the one that used the command."""
         return ctx.author.id != self.bot.settings.moist_id and ctx.author.id != 765451755332304927
 
-    @commands.command(hidden=True)
-    async def test(self, ctx):
-        pass
-
     @commands.command()
     async def rank(self, ctx, *args):
         summoner_name = " ".join(args)

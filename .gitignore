@@ -11,3 +11,5 @@ storage/temp_file_name.png
 storage/temp_file_name_color.png
 storage/temp_file_name_color2.png
 *.png
+*.csv
+*.csv

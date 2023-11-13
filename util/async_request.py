@@ -12,7 +12,7 @@ async def request(url, ssl=True, **kwargs):
             if 'application/json' in content_type:
                 return r.status, await r.json()
 
-            if 'image/png' in content_type:
+            elif 'image/png' in content_type:
                 image_data = BytesIO(await r.read())
                 return r.status, image_data
 

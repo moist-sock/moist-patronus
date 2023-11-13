@@ -1,5 +1,7 @@
 import asyncio
+import csv
 import json
+import os
 
 import discord
 import textdistance
@@ -20,6 +22,7 @@ from util.async_request import request
 from bs4 import BeautifulSoup
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
+from pprint import pprint
 from util.store_test_json import store_test
 
 
@@ -72,29 +75,29 @@ class Runescape(commands.Cog):
             "Thermonuclear Smoke Devil"
         ]
         self.skills = ['Overall',
-              'Attack',
-              'Defence',
-              'Strength',
-              'Hitpoints',
-              'Ranged',
-              'Prayer',
-              'Magic',
-              'Cooking',
-              'Woodcutting',
-              'Fletching',
-              'Fishing',
-              'Firemaking',
-              'Crafting',
-              'Smithing',
-              'Mining',
-              'Herblore',
-              'Agility',
-              'Thieving',
-              'Slayer',
-              'Farming',
-              'Runecraft',
-              'Hunter',
-              'Construction']
+                       'Attack',
+                       'Defence',
+                       'Strength',
+                       'Hitpoints',
+                       'Ranged',
+                       'Prayer',
+                       'Magic',
+                       'Cooking',
+                       'Woodcutting',
+                       'Fletching',
+                       'Fishing',
+                       'Firemaking',
+                       'Crafting',
+                       'Smithing',
+                       'Mining',
+                       'Herblore',
+                       'Agility',
+                       'Thieving',
+                       'Slayer',
+                       'Farming',
+                       'Runecraft',
+                       'Hunter',
+                       'Construction']
 
         with open("storage/osrs_bosses.json", "r") as f:
             self.boss_dict = json.load(f)
@@ -656,11 +659,8 @@ class Runescape(commands.Cog):
         await self.bot.wait_until_ready()
         while self is self.bot.get_cog('Runescape'):
             await run_daily_task('08:00:00')
-            await self.bot.get_user(self.bot.settings.moist_id).send(
-                "Good morning!!\nI am gonna update the spreadsheets now :D")
-            await self.bot.get_user(self.bot.settings.sarah_id).send(
-                "Good morning!!\nI am gonna update the spreadsheets now :D")
             await self.run_spreadsheets()
+            await self.collection()
 
     async def news_loop(self):
         await self.bot.wait_until_ready()
@@ -669,6 +669,12 @@ class Runescape(commands.Cog):
             await asyncio.sleep(600)
 
     async def run_spreadsheets(self):
+
+        await self.bot.get_user(self.bot.settings.moist_id).send(
+            "Good morning!!\nI am gonna update the spreadsheets now :D")
+        await self.bot.get_user(self.bot.settings.sarah_id).send(
+            "Good morning!!\nI am gonna update the spreadsheets now :D")
+
         await inputter("The Whisperer", "whisperer kc", compare_rank=1)
         await inputter("The Leviathan", "leviathan kc", compare_rank=1, main="hemeonc")
         await inputter("Duke Sucellus", "duke kc", extra="hemeonc", compare_rank=1000)
@@ -694,10 +700,130 @@ class Runescape(commands.Cog):
         distances = []
 
         for real_skill in self.skills:
-
             distances.append([real_skill, textdistance.Levenshtein()(real_skill.lower(), skill)])
 
         return sorted(distances, key=lambda x: x[1])[0][0]
+
+    def update_headers(self, new_headers):
+        with open("storage/osrs_account_data.csv", 'r', newline='') as f:
+            reader = csv.DictReader(f, fieldnames=new_headers)
+
+            data = list(reader)  # Read the data
+
+            # Use a new file for writing
+            with open("storage/updated_osrs_account_data.csv", 'w', newline='') as f_out:
+                writer = csv.DictWriter(f_out, fieldnames=reader.fieldnames)
+                writer.writeheader()
+
+                # Start from the beginning of the read data
+                for row in data:
+                    writer.writerow(row)
+
+            # Replace the original file with the updated file
+            os.replace("storage/updated_osrs_account_data.csv", "storage/osrs_account_data.csv")
+            os.remove("storage/updated_osrs_account_data.csv")
+
+    # with open("storage/osrs_account_data.csv", 'r', newline='') as file:
+    #     reader = csv.reader(file)
+    #     data = list(reader)  # Read the data
+    #
+    # with open("storage/updated_osrs_account_data.csv", 'w', newline='') as new_file:
+    #     writer = csv.writer(new_file)
+    #
+    #     # Write the updated headers
+    #     writer.writerow(new_headers)
+    #
+    #     # Write the old data excluding the original headers
+    #     writer.writerows(data[1:])  # Skip the original headers row
+
+    @commands.command()
+    async def pull2(self, ctx):
+        all_accounts = []
+        for gamer in self.gamer_dict['users']:
+            try:
+                osrs_accounts = self.gamer_dict['users'][gamer]['osrs']
+                all_accounts.extend(osrs_accounts)
+            except KeyError:
+                continue
+        today = datetime.now().date()
+
+        # Remove duplicates and sort accounts for consistent header order
+        unique_accounts = sorted(set(all_accounts))
+
+        # Prepare the header for the CSV file
+        header = ['date'] + unique_accounts
+
+        self.update_headers(header)
+
+        # Fetch data for each account
+        account_data = {}
+        for account in unique_accounts:
+            status, info = await request(
+                f"https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player={account}")
+            data = info.splitlines()
+            joined_data = ' '.join(data)
+            account_data[account] = joined_data
+
+        # Write to the CSV file
+        with open("storage/osrs_account_data.csv", 'a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=header)
+
+            # Check if file is empty, write header if it is
+            if f.tell() == 0:
+                writer.writeheader()
+
+            # Prepare the row for writing
+            row = {'date': today}
+            row.update(account_data)  # Add data for each account to the row
+
+            writer.writerow(row)
+        # today = datetime.now().date()
+        # for account in all_accounts:
+        #     status, info = await request(f"https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player={account}")
+        #     data = info.splitlines()
+        #     # Join the lines of data into a single string
+        #     joined_data = ' '.join(data)
+        #
+        #     with open("storage/osrs_account_data.csv", 'a', newline='') as f:
+        #         writer = csv.writer(f)
+        #         writer.writerow([today, account, joined_data])
+
+    async def collection(self):
+        await self.bot.get_user(self.bot.settings.moist_id).send(
+                "Good morning!!\nI am gonna collect account data now :D")
+        with open("storage/osrs_account_data.json", "r") as f:
+            osrs_account_data = json.load(f)
+
+        all_accounts = []
+        for gamer in self.gamer_dict['users']:
+            try:
+                osrs_accounts = self.gamer_dict['users'][gamer]['osrs']
+                all_accounts.extend(osrs_accounts)
+            except KeyError:
+                continue
+        today = datetime.now().strftime('%d%b%Y').upper()
+
+        for account in all_accounts:
+            status, info = await request(
+                f"https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player={account}")
+
+            if status != 200:
+                if status == 404:
+                    print(f"status 404 in collection, skipping account {account} for data collection")
+                    info = "None"
+                else:
+                    print(f"error{status} in collection for {account}")
+                    info = "None"
+
+            data = info.splitlines()
+            joined_data = ' '.join(data)
+            account_dict = osrs_account_data.get(account, {})
+            account_dict[today] = joined_data
+            osrs_account_data[account] = account_dict
+
+        with open("storage/osrs_account_data.json", 'w') as f:
+            json.dump(osrs_account_data, f, indent=2)
+
 
 
 async def setup(bot):
