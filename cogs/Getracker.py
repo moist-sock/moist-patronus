@@ -7,7 +7,8 @@ from discord.ext import commands
 
 from util.async_request import request
 from util.store_test_json import store_test
-from util.time_functions import time_ago
+from util.time_functions import time_ago, run_half_hourly_task
+from pprint import pprint
 
 
 class Getracker(commands.Cog):
@@ -232,6 +233,120 @@ class Getracker(commands.Cog):
 
     async def all_item_price_with_volume(self):
         return await self.ge_api_request("https://prices.runescape.wiki/api/v1/osrs/5m")
+
+    @commands.command()
+    async def cry(self, ctx, *args):
+        if args:
+            check = args[0]
+
+        else:
+            check = False
+        if check == "2":
+            items_sold = {"inq": {"name": "Inquisitor's armour set",
+                                  "price": 172_600_000,
+                                  "id": 24488}
+                          }
+
+            items_bought = {"weapon_seed": {"price": 90_875_000,
+                                            "amount": 100,
+                                            "name": "Enhanced crystal weapon seed",
+                                            "id": 25859}}
+        else:
+            items_sold = {"tbow": {"name": "Twisted bow",
+                                   "price": 1_510_000_000,
+                                   "id": 20997},
+                          "shadow": {"price": 1_338_000_000,
+                                     "name": "Tumeken's shadow (uncharged)",
+                                     "id": 27277},
+                          "acb": {"price": 51_480_000,
+                                  "name": "Armadyl crossbow",
+                                  "id": 11785},
+                          "zvambs": {"price": 156_420_000,
+                                     "name": "Zaryte vambraces",
+                                     "id": 26235},
+                          "masori": {"price": 222_750_000,
+                                     "name": "Masori armour set (f)",
+                                     "id": 27355},
+                          "venny_bow": {"price": 26_081_101,
+                                        "name": "Venator bow (uncharged)",
+                                        "id": 27612},
+                          "virtus_top": {"price": 72_634_844,
+                                         "name": "Virtus robe top",
+                                         "id": 26243},
+                          "virtus_bottom": {"price": 30_135_600,
+                                            "name": "Virtus robe bottom",
+                                            "id": 26245}}
+
+            items_bought = {"armour_seed": {"price": 4_054_568,
+                                            "amount": 658,
+                                            "name": "Crystal armour seed",
+                                            "id": 23956},
+                            "weapon_seed": {"price": 90_850_000,
+                                            "amount": 8,
+                                            "name": "Enhanced crystal weapon seed",
+                                            "id": 25859}}
+
+        status, items_prices = await self.all_item_price_with_most_recent_transaction()
+
+        if status != 200:
+            print(f"error in cry, {status}")
+            return await ctx.send("error in api call")
+
+        items_prices = items_prices["data"]
+
+        lowprofit = 0
+        highprofit = 0
+
+        items_sold_msg = ""
+        items_bought_msg = ""
+        for key in items_sold.keys():
+            items_sold[key]["currentlow"] = items_prices[str(items_sold[key]["id"])]["low"]
+            items_sold[key]["currenthigh"] = items_prices[str(items_sold[key]["id"])]["high"]
+            if check == "2":
+                items_sold[key]["highprofit"] = (items_sold[key]["price"] - items_sold[key]["currentlow"]) * 50
+                items_sold[key]["lowprofit"] = (items_sold[key]["price"] - items_sold[key]["currenthigh"]) * 50
+
+            else:
+                items_sold[key]["highprofit"] = items_sold[key]["price"] - items_sold[key]["currentlow"]
+                items_sold[key]["lowprofit"] = items_sold[key]["price"] - items_sold[key]["currenthigh"]
+
+            lowprofit += items_sold[key]["lowprofit"]
+            highprofit += items_sold[key]["highprofit"]
+
+            items_sold_msg += f"{items_sold[key]['name']}: {items_sold[key]['lowprofit']:,} | {items_sold[key]['highprofit']:,}\n"
+
+        for key in items_bought.keys():
+            lowprice = items_prices[str(items_bought[key]["id"])]["low"]
+            highprice = items_prices[str(items_bought[key]["id"])]["high"]
+            items_bought[key]["currentlow"] = lowprice
+            items_bought[key]["currenthigh"] = highprice
+            items_bought[key]["lowprofit"] = int(lowprice - items_bought[key]["price"] - self.tax(lowprice)) * items_bought[key]["amount"]
+            items_bought[key]["highprofit"] = int(highprice - items_bought[key]["price"] - self.tax(highprice)) * items_bought[key]["amount"]
+            items_bought[key]["lowroi"] = round(((lowprice - items_bought[key]["price"] - self.tax(lowprice)) / items_bought[key]["price"]) * 100, 2)
+            items_bought[key]["highroi"] = round(((highprice - items_bought[key]["price"] - self.tax(highprice)) / items_bought[key]["price"]) * 100, 2)
+
+            lowprofit += items_bought[key]["lowprofit"]
+            highprofit += items_bought[key]["highprofit"]
+            items_bought_msg += f"{items_bought[key]['name']}: {items_bought[key]['lowprofit']:,} | {items_bought[key]['highprofit']:,} | {items_bought[key]['lowroi']}%-{items_bought[key]['highroi']}%\n"
+
+        return await ctx.send(f"worst case: {lowprofit:,}\nbest case: {highprofit:,}\n\n"
+                              f"{items_bought_msg}\n"
+                              f"{items_sold_msg}")
+
+    def tax(self, price):
+        tax = price * 0.01
+        if tax > 5_000_000:
+            tax = 5_000_000
+
+        return tax
+
+    # async def cry_loop(self):
+    #     await self.bot.wait_until_ready()
+    #     while self is self.bot.get_cog('Runescape'):
+    #         await run_half_hourly_task()
+
+    async def collect_cry(self):
+        pass
 
 
 async def setup(bot):

@@ -15,18 +15,15 @@ class Fun(commands.Cog):
             return
         raise error
 
-    @commands.command(aliases=["find"], hidden=True)
-    async def find_json_files(self, ctx):
-        base_directory = r"C:\Users\duke\Documents\GitHub\moist-patronus"
-        for root, dirs, files in os.walk(base_directory):
-            if "site-packages" in root:
-                continue
-            for filename in files:
-                # Check if the file has a .json extension
-                if filename.endswith('.json') or filename.endswith('.txt'):
-                    # Print the full path to the JSON file
-                    json_file_path = os.path.join(root, filename)
-                    print(json_file_path)
+    # @commands.Cog.listener()
+    # async def on_voice_state_update(self, member, before, after):
+    #     target_channel_id = 909384524050337807
+    #
+    #     if member.id == self.bot.settings.sarah_id and after.channel and after.channel.id == target_channel_id and not self.bot.settings.sarah_id in voice_channel.:
+    #         await self.bot.get_user(self.bot.settings.moist_id).send(
+    #             "Baby is waiting for you in call")
+    #         await self.bot.get_user(self.bot.settings.sarah_id).send(
+    #             "Hello I am letting baby know that you joined call")
 
 
 async def setup(bot):

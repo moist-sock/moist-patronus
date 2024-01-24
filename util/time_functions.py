@@ -17,6 +17,20 @@ async def run_daily_task(times, timezone='US/Eastern'):
     await asyncio.sleep(time_difference.total_seconds())
 
 
+async def run_half_hourly_task(timezone='US/Eastern'):
+    current_time = datetime.datetime.now(pytz.timezone(timezone))
+
+    # Calculate the time until the next 30-minute mark
+    minutes_until_next_30 = (30 - current_time.minute % 30) % 30
+    seconds_until_next_30 = 60 - current_time.second
+
+    # Calculate the total time difference
+    time_difference = datetime.timedelta(minutes=minutes_until_next_30, seconds=seconds_until_next_30)
+
+    # Sleep for the calculated time difference
+    await asyncio.sleep(time_difference.total_seconds())
+
+
 async def time_ago(timestamp):
     current_time = datetime.datetime.utcnow()
     timestamp_datetime = datetime.datetime.utcfromtimestamp(timestamp)

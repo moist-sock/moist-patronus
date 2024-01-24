@@ -183,7 +183,7 @@ class League(Cog):
             return
 
         summoner_name = summoner_dict['name']
-        summoner_id = summoner_dict['id']
+        summoner_id = summoner_dict['puuid']
 
         with open('storage/league.json', 'w') as f:
             persons_id = str(ctx.author.id)
@@ -371,7 +371,7 @@ class League(Cog):
             json.dump(r[1], f, indent=2)
 
     async def mastery_request(self, summoner_id, champion_id):
-        url = f'https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-summoner/{summoner_id}/by-champion/{champion_id}'
+        url = f'https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{summoner_id}/by-champion/{champion_id}'
 
         r = await self.league_api_request(url)
 

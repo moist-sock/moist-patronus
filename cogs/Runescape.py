@@ -3226,6 +3226,9 @@ class Runescape(commands.Cog):
 
     @commands.command(aliases=['kc'])
     async def boss_kc(self, ctx, *args):
+        with open("storage/osrs_bosses.json", "r") as f:
+            self.boss_dict = json.load(f)
+
         try:
             gamers, raw_boss = self.parse_input(ctx, args)
 
@@ -3284,6 +3287,7 @@ class Runescape(commands.Cog):
     @commands.command(aliases=["spread"], hidden=True)
     async def manually_update_spreadsheet(self, ctx):
         await self.run_spreadsheets()
+        await self.collection()
         return await ctx.send("All done!")
 
     @commands.command(hidden=True)
@@ -3718,8 +3722,8 @@ class Runescape(commands.Cog):
                 yesterday_stats = levels_wrapper(data[gamer][formatted_yesterday].split(" "))
                 today_stats = levels_wrapper(data[gamer][formatted_today].split(" "))
 
-            except KeyError:
-                await ctx.send(f"Information for `{gamer}` is not available")
+            except KeyError as e:
+                await ctx.send(f"Information for `{e.args[0]}` is not available")
                 continue
 
             difference = []
@@ -3740,15 +3744,6 @@ class Runescape(commands.Cog):
                 msg += f"{dif[0]}: {dif[1]:,}\n"
 
             await ctx.send(msg)
-
-    @commands.command()
-    async def test(self, ctx):
-        with open("storage/osrs_items.json", "r") as f:
-            tradeable_items = json.load(f)
-
-        print(len(list(set(tradeable_items.keys()) & set(self.items))))
-
-
 
 
 async def setup(bot):
