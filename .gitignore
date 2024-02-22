@@ -13,3 +13,4 @@ storage/temp_file_name_color2.png
 *.png
 *.csv
 *.csv
+util/restart.ahk

@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 
@@ -7,13 +8,14 @@ from discord.ext import commands
 
 from util.async_request import request
 from util.store_test_json import store_test
-from util.time_functions import time_ago, run_half_hourly_task
+from util.time_functions import time_ago, run_half_hourly_task, run_daily_task
 from pprint import pprint
 
 
 class Getracker(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.item_loop = asyncio.create_task(self.check_items())
         self.headers = {"User-Agent": "Discord bot for item price look up - moists0ck"}
 
         with open("storage/osrs_items.json", "r") as f:
@@ -24,6 +26,45 @@ class Getracker(commands.Cog):
 
     async def ge_api_request(self, url):
         return await request(url, headers=self.headers)
+
+    async def check_items(self):
+        await self.bot.wait_until_ready()
+        while self is self.bot.get_cog('Getracker'):
+            await run_daily_task('08:00:30')
+            await self.update_items()
+
+    async def update_items(self):
+        status, list_of_items = await request("https://prices.runescape.wiki/api/v1/osrs/mapping")
+
+        if status != 200:
+            print(f"error in def update_items, {status}")
+            return
+
+        item_dict = {}
+        id_to_item = {}
+        for item in list_of_items:
+            item_dict[item["name"]] = {"examine": item.get("examine", None),
+                                       "id": item.get("id", None),
+                                       "members": item.get("members", None),
+                                       "lowalch": item.get("lowalch", None),
+                                       "limit": item.get("limit", None),
+                                       "value": item.get("value", None),
+                                       "highalch": item.get("highalch", None),
+                                       "icon": item.get("icon", None)}
+            id_to_item[item.get("id", "fart")] = item.get("name", "poop")
+
+        if item_dict == self.items:
+            return
+
+        await self.bot.get_user(self.bot.settings.moist_id).send("New items were added to osrs!!")
+        self.items = item_dict
+        self.items_id = id_to_item
+
+        with open("storage/osrs_items.json", "w") as f:
+            json.dump(item_dict, f, indent=2)
+
+        with open("storage/osrs_item_id_dict.json", "w") as f:
+            json.dump(id_to_item, f, indent=2)
 
     @commands.command(aliases=['p'])
     async def price(self, ctx, *args):
@@ -38,8 +79,8 @@ class Getracker(commands.Cog):
         status, items_prices = await self.all_item_price_with_most_recent_transaction()
 
         if status != 200:
-            print(status)
-            return
+            print(f"error in !price {status}, args given = {item_name}")
+            return await ctx.send("uh something went wrong in my code :(")
 
         key = str(self.items[item_name]["id"])
 
@@ -132,7 +173,8 @@ class Getracker(commands.Cog):
                 if len(top_20) == 20:
                     break
 
-                if one_hour_ago > datetime.datetime.utcfromtimestamp(item[5]) and one_hour_ago > datetime.datetime.utcfromtimestamp(item[6]):
+                if one_hour_ago > datetime.datetime.utcfromtimestamp(
+                        item[5]) and one_hour_ago > datetime.datetime.utcfromtimestamp(item[6]):
                     continue
 
                 if volume > item[4]:
@@ -320,10 +362,14 @@ class Getracker(commands.Cog):
             highprice = items_prices[str(items_bought[key]["id"])]["high"]
             items_bought[key]["currentlow"] = lowprice
             items_bought[key]["currenthigh"] = highprice
-            items_bought[key]["lowprofit"] = int(lowprice - items_bought[key]["price"] - self.tax(lowprice)) * items_bought[key]["amount"]
-            items_bought[key]["highprofit"] = int(highprice - items_bought[key]["price"] - self.tax(highprice)) * items_bought[key]["amount"]
-            items_bought[key]["lowroi"] = round(((lowprice - items_bought[key]["price"] - self.tax(lowprice)) / items_bought[key]["price"]) * 100, 2)
-            items_bought[key]["highroi"] = round(((highprice - items_bought[key]["price"] - self.tax(highprice)) / items_bought[key]["price"]) * 100, 2)
+            items_bought[key]["lowprofit"] = int(lowprice - items_bought[key]["price"] - self.tax(lowprice)) * \
+                                             items_bought[key]["amount"]
+            items_bought[key]["highprofit"] = int(highprice - items_bought[key]["price"] - self.tax(highprice)) * \
+                                              items_bought[key]["amount"]
+            items_bought[key]["lowroi"] = round(
+                ((lowprice - items_bought[key]["price"] - self.tax(lowprice)) / items_bought[key]["price"]) * 100, 2)
+            items_bought[key]["highroi"] = round(
+                ((highprice - items_bought[key]["price"] - self.tax(highprice)) / items_bought[key]["price"]) * 100, 2)
 
             lowprofit += items_bought[key]["lowprofit"]
             highprofit += items_bought[key]["highprofit"]

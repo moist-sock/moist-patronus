@@ -3294,13 +3294,17 @@ class Runescape(commands.Cog):
     async def check(self, ctx):
         spread_loop = "on"
         news_loop = "on"
+        items_loop = "on"
+        if self.bot.get_cog('Getracker').item_loop.done():
+            items_loop = "off"
         if self.spreadsheet.done():
             spread_loop = "off"
         if self.news_loop_check.done():
             news_loop = "off"
 
         await ctx.send(f"spreadsheet loop is {spread_loop}\n"
-                       f"news post loop is {news_loop}")
+                       f"news post loop is {news_loop}\n"
+                       f"item loop is {items_loop}")
 
     @commands.command()
     async def ranboss(self, ctx):

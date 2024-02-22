@@ -28,13 +28,15 @@ class Admin(commands.Cog):
             return -1, None, str(e)
 
     def restart_program(self):
-        python = sys.executable
-        os.execl(python, python, *sys.argv)
+        subprocess.run([r"C:\Program Files\AutoHotkey\v1.1.37.01\AutoHotkeyA32", "util/restart.ahk"], check=True)
 
     @commands.command(hidden=True)
     async def restart(self, ctx):
+        if ctx.author.id != self.bot.settings.moist_id:
+            return await ctx.send("Why do you wanna restart me??")
+
         await ctx.send("Restarting bot...")
-        self.restart_program2()
+        self.restart_program()
 
     @commands.command(hidden=True)
     async def reload(self, ctx, message):
