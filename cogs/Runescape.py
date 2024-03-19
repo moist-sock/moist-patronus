@@ -10,7 +10,7 @@ import pathlib
 
 from datetime import datetime, timedelta
 from math import log, ceil
-from discord import Embed
+from discord import Embed, app_commands
 from discord.ext import commands
 from osrs.hiscores_stuff.hiscores import get_boss_kc, get_stats, levels_wrapper
 from osrs.spreadsheets.google_sheet_inputter import inputter
@@ -29,7 +29,7 @@ from util.store_test_json import store_test
 class NoName(Exception):
     async def message(self, ctx, sep):
         await ctx.send(
-            f"Either add your account to the bot with !osrs or add '{sep} (account name)' after the first input")
+            f"Either add your account to the bot with /osrs or add '{sep} (account name)' after the first input")
 
 
 class Runescape(commands.Cog):
@@ -37,6 +37,7 @@ class Runescape(commands.Cog):
         self.bot = bot
         self.spreadsheet = asyncio.create_task(self.spreadsheet_loop())
         self.news_loop_check = asyncio.create_task(self.news_loop())
+        self.account_data = asyncio.create_task(self.account_data_loop())
         self.seperator = "/"
 
         self.fake_bosses = [
@@ -3070,6 +3071,15 @@ class Runescape(commands.Cog):
             "Zuriel's staff (bh)"
         ]
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        try:
+            synced = await self.bot.tree.sync()
+            print(f"Synced {len(synced)} commands")
+
+        except Exception as e:
+            print(e)
+
     @commands.command()
     async def funbox(self, ctx):
         return await ctx.send(
@@ -3194,6 +3204,60 @@ class Runescape(commands.Cog):
 
             await ctx.send(embed=embed_msg)
 
+    # noinspection PyUnresolvedReferences
+    @app_commands.command(name="osrs", description="manage osrs accounts")
+    @app_commands.describe(options='Options to choose from')
+    @app_commands.choices(options=[
+        discord.app_commands.Choice(name='View', value=1),
+        discord.app_commands.Choice(name='Add', value=2),
+        discord.app_commands.Choice(name='Remove', value=3)
+    ])
+    @app_commands.guild_only()
+    async def osrs_slash(self, interaction: discord.Interaction, options: discord.app_commands.Choice[int], account: str=None):
+        user_id = str(interaction.user.id)
+        if account:
+            account = account.strip()
+
+        user_dict = self.gamer_dict['users'].get(user_id, {})
+        list_of_accounts = self.gamer_dict['users'].get(user_id, {}).get("osrs", [])
+
+        match options.value:
+            case 1:
+                if not list_of_accounts:
+                    return await interaction.response.send_message("you don't have any osrs accounts set up with me :(")
+
+                output_msg = "Here are the accounts I am keeping track of\n"
+                output_msg += "\n".join(list_of_accounts)
+                return await interaction.response.send_message(output_msg)
+
+            case 2:
+                if account is None:
+                    return await interaction.response.send_message("Type an account to add")
+
+                elif account in list_of_accounts:
+                    return await interaction.response.send_message("No! That task is already in there")
+
+                list_of_accounts.append(account)
+                user_dict['osrs'] = list_of_accounts
+                self.gamer_dict['users'][user_id] = user_dict
+
+                with open('storage/league.json', 'w') as f:
+                    json.dump(self.gamer_dict, f, indent=1)
+                return await interaction.response.send_message(f"Account has successfully been added\n" + "\n".join(list_of_accounts))
+
+            case 3:
+                if account is None:
+                    return await interaction.response.send_message("Type an account to remove")
+                account = self.spell_check(account, list_of_accounts)
+                list_of_accounts.remove(account)
+                user_dict['osrs'] = list_of_accounts
+                self.gamer_dict['users'][user_id] = user_dict
+
+                with open('storage/league.json', 'w') as f:
+                    json.dump(self.gamer_dict, f, indent=1)
+                return await interaction.response.send_message(f"{account}\n has successfully been removed")
+
+
     @commands.group()
     async def osrs(self, ctx, *args):
         """Set osrs account"""
@@ -3295,16 +3359,21 @@ class Runescape(commands.Cog):
         spread_loop = "on"
         news_loop = "on"
         items_loop = "on"
+        account_loop = "on"
+
         if self.bot.get_cog('Getracker').item_loop.done():
             items_loop = "off"
         if self.spreadsheet.done():
             spread_loop = "off"
         if self.news_loop_check.done():
             news_loop = "off"
+        if self.account_data.done():
+            account_loop = "off"
 
         await ctx.send(f"spreadsheet loop is {spread_loop}\n"
                        f"news post loop is {news_loop}\n"
-                       f"item loop is {items_loop}")
+                       f"item loop is {items_loop}\n"
+                       f"account data loop is {account_loop}")
 
     @commands.command()
     async def ranboss(self, ctx):
@@ -3346,7 +3415,7 @@ class Runescape(commands.Cog):
         except NoName:
             return await NoName.message(NoName(), ctx, self.seperator)
 
-        skill = await self.skill_spell_check(raw_skill)
+        skill = await self.spell_check(raw_skill, self.skills)
 
         embed_msg = Embed(
             title=f'{skill}',
@@ -3385,10 +3454,74 @@ class Runescape(commands.Cog):
     async def lookup(self, ctx, *args):
         gamer = " ".join(args)
 
-        image_url = "https://cdn.discordapp.com/attachments/1156780650108555366/1169525486137913374/image.png?ex=6555b87c&is=6543437c&hm=bf8ad555ebfbabdaa99012f2a59ed519038a1b798dc5bf12cca1965d36fef83f&"
-        status, image_data = await request(image_url)
+        status, stats = await get_stats(gamer)
+        if status != 200:
+            if status == 404:
+                return await ctx.send(f"could not find data for user `{gamer}`")
+            else:
+                print(f"error in !lookup\n"
+                      f"status code {status}")
+                return
 
-        image = Image.open(image_data)
+        await self.make_skills_page(stats, ctx)
+
+    @commands.command()
+    @commands.cooldown(1, 60, commands.BucketType.default)
+    async def minlevel(self, ctx):
+        skills = ['Overall',
+              'Attack',
+              'Defence',
+              'Strength',
+              'Hitpoints',
+              'Ranged',
+              'Prayer',
+              'Magic',
+              'Cooking',
+              'Woodcutting',
+              'Fletching',
+              'Fishing',
+              'Firemaking',
+              'Crafting',
+              'Smithing',
+              'Mining',
+              'Herblore',
+              'Agility',
+              'Thieving',
+              'Slayer',
+              'Farming',
+              'Runecraft',
+              'Hunter',
+              'Construction']
+        skills_dict = {}
+        for table_number in range(0, 24):
+            url = f"https://secure.runescape.com/m=hiscore_oldschool/a=12/overall?table={table_number}&rank=2000000#headerHiscores"
+
+            status, html = await request(url)
+            if status != 200:
+                print(f"kaboom in minlevel - {status}")
+                return
+
+            soup = BeautifulSoup(html, 'html.parser')
+
+            # Find all <td> elements with class "right"
+            td_elements = soup.find_all('td', class_='right')
+
+            # Iterate through each <td> element
+            for td in td_elements:
+                # Check if the text of the element is "2,000,000"
+                if td.get_text(strip=True) == '2,000,000':
+                    # Get the username associated with this <td> element
+                    username = td.find_next('td', class_='left').find('a').get_text(strip=True)
+                    # Get the next <td> element which contains the level
+                    level_td = td.find_next('td', class_='left').find_next_sibling('td')
+                    # Get the level associated with this <td> element
+                    level = level_td.get_text(strip=True)
+                    skills_dict[skills[table_number]] = {'level': int(level)}
+                    break
+
+        await self.make_skills_page(skills_dict, ctx)
+
+    async def make_skills_page(self, skills_dict, ctx):
         skills = ['Attack',
                   'Hitpoints',
                   'Mining',
@@ -3413,14 +3546,14 @@ class Runescape(commands.Cog):
                   'Construction',
                   'Hunter']
 
-        status, stats = await get_stats(gamer)
-        if status != 200:
-            if status == 404:
-                return await ctx.send(f"could not find data for user `{gamer}`")
-            else:
-                print(f"error in !lookup\n"
-                      f"status code {status}")
-                return
+        image_url = "https://i.imgur.com/DRcMNA3.png"
+        status, image_data = await request(image_url)
+
+        try:
+            image = Image.open(image_data)
+
+        except AttributeError:
+            return await ctx.send("picture broken")
 
         draw = ImageDraw.Draw(image)
 
@@ -3442,7 +3575,7 @@ class Runescape(commands.Cog):
                     continue
 
                 try:
-                    number = str(stats[skills[count]]['level'])
+                    number = str(skills_dict[skills[count]]['level'])
 
                 except KeyError:
                     number = '1'
@@ -3458,7 +3591,7 @@ class Runescape(commands.Cog):
                 overall_number += int(number)
 
         try:
-            overall_number = str(stats['Overall']['level'])
+            overall_number = str(skills_dict['Overall']['level'])
 
         except KeyError:
             overall_number = ">" + str(overall_number)
@@ -3559,6 +3692,7 @@ class Runescape(commands.Cog):
 
             await self.bot.get_channel(real_id).send(embed=embed)
             await self.bot.get_user(self.bot.settings.moist_id).send(embed=embed)
+            await self.bot.get_user(426983855656796162).send(embed=embed)  # clark id
 
     def this_is_a_news_link(self, url):
         is_link = True
@@ -3609,10 +3743,8 @@ class Runescape(commands.Cog):
         title = soup.title.string
         image_url = soup.find('img', {'alt': title, 'title': title})['src']
 
-        hyperlink = f"[Link to post]({url})"
-
         embed = Embed(title=title,
-                      description=url)
+                      url=url)
 
         embed.set_thumbnail(url="https://www.runescape.com/img/rsp777/social-share.jpg?1")
         embed.set_image(url=image_url)
@@ -3624,6 +3756,11 @@ class Runescape(commands.Cog):
         while self is self.bot.get_cog('Runescape'):
             await run_daily_task('08:00:00')
             await self.run_spreadsheets()
+
+    async def account_data_loop(self):
+        await self.bot.wait_until_ready()
+        while self is self.bot.get_cog('Runescape'):
+            await run_daily_task('00:00:45')
             await self.collection()
 
     async def news_loop(self):
@@ -3660,17 +3797,17 @@ class Runescape(commands.Cog):
 
         return sorted(distances, key=lambda x: x[1])[0][0]
 
-    async def skill_spell_check(self, skill):
+    def spell_check(self, thing_that_need_spellcheck, list_to_use):
         distances = []
 
-        for real_skill in self.skills:
-            distances.append([real_skill, textdistance.Levenshtein()(real_skill.lower(), skill)])
+        for real_thing_in_list in list_to_use:
+            distances.append([real_thing_in_list, textdistance.Levenshtein()(real_thing_in_list.lower(), thing_that_need_spellcheck)])
 
         return sorted(distances, key=lambda x: x[1])[0][0]
 
     async def collection(self):
         await self.bot.get_user(self.bot.settings.moist_id).send(
-            "Good morning!!\nI am gonna collect account data now :D")
+            "Good night!!\nI am gonna collect account data now :D")
         with open("storage/osrs_account_data.json", "r") as f:
             osrs_account_data = json.load(f)
 
@@ -3688,12 +3825,11 @@ class Runescape(commands.Cog):
                 f"https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player={account}")
 
             if status != 200:
+                info = "-1,0,0 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1"
                 if status == 404:
                     print(f"status 404 in collection, skipping account {account} for data collection")
-                    info = "None"
                 else:
                     print(f"error{status} in collection for {account}")
-                    info = "None"
 
             data = info.splitlines()
             joined_data = ' '.join(data)
@@ -3716,8 +3852,8 @@ class Runescape(commands.Cog):
             data = json.load(f)
 
         today = datetime.now()
-        yesterday = today - timedelta(days=2)
-        today -= timedelta(days=1)
+        yesterday = today - timedelta(days=1)
+        today -= timedelta(days=0)
         formatted_yesterday = yesterday.strftime('%d%b%Y').upper()
         formatted_today = today.strftime('%d%b%Y').upper()
 
@@ -3740,14 +3876,109 @@ class Runescape(commands.Cog):
                     difference.append([stat, dif_xp])
 
             if not difference:
-                await ctx.send(f"{gamer} gained NO xp on {formatted_today}\n")
+                await ctx.send(f"{gamer} gained NO xp on {formatted_yesterday}\n")
                 continue
 
-            msg = f"{gamer} xp gained on {formatted_today}\n"
+            msg = f"{gamer} xp gained on {formatted_yesterday}\n"
             for dif in difference:
                 msg += f"{dif[0]}: {dif[1]:,}\n"
 
             await ctx.send(msg)
+
+    # noinspection PyUnresolvedReferences
+    @app_commands.command(name="quest", description="look up if an osrs account has done a certain quest")
+    async def slash_quest(self, interaction: discord.Interaction, quest_name: str, username: str=None,):
+        if username:
+            gamers = [username]
+        else:
+            gamers = None
+
+        if gamers is None:
+
+            try:
+                gamers = self.gamer_dict['users'][str(interaction.user.id)]['osrs']
+
+            except KeyError:
+                return await interaction.response.send_message(f"Either add your account to the bot with !osrs or add a name")
+
+        output_msg = ''
+        for gamer in gamers:
+
+            url = f"https://sync.runescape.wiki/runelite/player/{gamer}/STANDARD"
+
+            status, gamer_info = await request(url, headers={"User-Agent": "Message me on discord if you got beef - moists0ck"})
+
+            if status != 200:
+                if status == 400:
+                    return await interaction.response.send_message(f"No information was found for the user: `{gamer}`")
+                return await interaction.response.send_message(f"something went horribly wrong - error {status}")
+
+            quests = gamer_info["quests"]
+
+            list_of_quests = quests.keys()
+            real_quest_name = self.spell_check(quest_name, list_of_quests)
+
+            match int(quests[real_quest_name]):
+
+                case 0:
+                    output_msg += f"{gamer} has not started {real_quest_name} :(\n"
+
+                case 1:
+                    output_msg += f"{gamer} has started {real_quest_name} but has not finished :/\n"
+
+                case 2:
+                    output_msg += f"{gamer} has finished {real_quest_name} :D\n"
+
+                case _:
+                    output_msg += "0_0\n"
+
+        await interaction.response.send_message(output_msg)
+
+    @commands.command(aliases=["q"])
+    async def quest(self, ctx, *args):
+        try:
+            gamers, quest_name = self.parse_input(ctx, args)
+
+        except NoName:
+            return await NoName.message(NoName(), ctx, self.seperator)
+
+        for gamer in gamers:
+
+            url = f"https://sync.runescape.wiki/runelite/player/{gamer}/STANDARD"
+
+            status, gamer_info = await request(url, headers={"User-Agent": "Message me on discord if you got beef - moists0ck"})
+
+            if status != 200:
+                return await ctx.send(f"something went horribly wrong - error {status}")
+
+            quests = gamer_info["quests"]
+
+            list_of_quests = quests.keys()
+
+            real_quest_name = self.spell_check(quest_name, list_of_quests)
+
+            match int(quests[real_quest_name]):
+
+                case 0:
+                    output_msg = f"{gamer} has not started {real_quest_name} :("
+
+                case 1:
+                    output_msg = f"{gamer} has started {real_quest_name} but has not finished :/"
+
+                case 2:
+                    output_msg = f"{gamer} has finished {real_quest_name} :D"
+
+                case _:
+                    output_msg = "0_0"
+
+            await ctx.send(output_msg)
+
+
+
+
+
+
+
 
 
 async def setup(bot):

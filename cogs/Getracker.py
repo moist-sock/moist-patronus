@@ -10,7 +10,17 @@ from util.async_request import request
 from util.store_test_json import store_test
 from util.time_functions import time_ago, run_half_hourly_task, run_daily_task
 from pprint import pprint
+import re
 
+def ge_tracker_url_gen(item):
+
+    # Use regular expression to replace anything within parentheses
+    item = re.sub(r'\((.*?)\)', r'\1', item).lower()
+
+    # Replace spaces and single quotes with hyphens
+    item = item.replace(" ", "-").replace("'", "-")
+
+    return f"https://www.ge-tracker.com/item/{item}"
 
 class Getracker(commands.Cog):
     def __init__(self, bot):
@@ -90,7 +100,9 @@ class Getracker(commands.Cog):
         except KeyError:
             return await ctx.send(f"`{item_name}`, is bad no price for you")
 
-        embed_msg = Embed(title=item_name)
+        url = ge_tracker_url_gen(item_name)
+        embed_msg = Embed(title=item_name,
+                          url=url)
 
         lowtime = await time_ago(price_dict['lowTime'])
         hightime = await time_ago(price_dict['highTime'])
@@ -338,7 +350,7 @@ class Getracker(commands.Cog):
 
         lowprofit = 0
         highprofit = 0
-
+        # 118_483_832
         items_sold_msg = ""
         items_bought_msg = ""
         for key in items_sold.keys():
@@ -358,8 +370,12 @@ class Getracker(commands.Cog):
             items_sold_msg += f"{items_sold[key]['name']}: {items_sold[key]['lowprofit']:,} | {items_sold[key]['highprofit']:,}\n"
 
         for key in items_bought.keys():
-            lowprice = items_prices[str(items_bought[key]["id"])]["low"]
-            highprice = items_prices[str(items_bought[key]["id"])]["high"]
+            if key == "weapon_seed" and args != "2":
+                lowprice = 118_483_832
+                highprice = 118_483_832
+            else:
+                lowprice = items_prices[str(items_bought[key]["id"])]["low"]
+                highprice = items_prices[str(items_bought[key]["id"])]["high"]
             items_bought[key]["currentlow"] = lowprice
             items_bought[key]["currenthigh"] = highprice
             items_bought[key]["lowprofit"] = int(lowprice - items_bought[key]["price"] - self.tax(lowprice)) * \

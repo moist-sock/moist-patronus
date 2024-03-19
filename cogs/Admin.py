@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import importlib
+from discord import app_commands
 import discord.ext.commands.errors
 from discord.ext import commands
 
@@ -9,15 +10,6 @@ from discord.ext import commands
 class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    """@commands.command()
-    async def logs(self, ctx):
-        filename = "logs/logs.txt"
-        sys.stdout.close()
-        await ctx.send(file=discord.File(filename))
-
-        sys.stdout = open('logs/logs.txt', 'a')
-        sys.stderr = sys.stdout"""
 
     def restart_program2(self):
         command_string = "python main2.py > output.txt 2>&1"
