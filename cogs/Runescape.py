@@ -1,7 +1,5 @@
 import asyncio
-import csv
 import json
-import os
 
 import discord
 import textdistance
@@ -22,8 +20,16 @@ from util.async_request import request
 from bs4 import BeautifulSoup
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
+from math import floor
 from pprint import pprint
 from util.store_test_json import store_test
+
+
+def formatted_yesterday_today():
+    today = datetime.now()
+    yesterday = today - timedelta(days=1)
+    today -= timedelta(days=0)
+    return yesterday.strftime('%d%b%Y').upper(), today.strftime('%d%b%Y').upper()
 
 
 class NoName(Exception):
@@ -3073,12 +3079,23 @@ class Runescape(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        await self.tree_sync()
+
+    async def tree_sync(self):
         try:
             synced = await self.bot.tree.sync()
             print(f"Synced {len(synced)} commands")
 
         except Exception as e:
             print(e)
+
+    @commands.command()
+    async def tree(self, ctx):
+        if ctx.author.id != self.bot.settings.moist_id:
+            return await ctx.send("no tree")
+
+        await self.tree_sync()
+        return await ctx.send("tree sync")
 
     @commands.command()
     async def funbox(self, ctx):
@@ -3213,7 +3230,8 @@ class Runescape(commands.Cog):
         discord.app_commands.Choice(name='Remove', value=3)
     ])
     @app_commands.guild_only()
-    async def osrs_slash(self, interaction: discord.Interaction, options: discord.app_commands.Choice[int], account: str=None):
+    async def osrs_slash(self, interaction: discord.Interaction, options: discord.app_commands.Choice[int],
+                         account: str = None):
         user_id = str(interaction.user.id)
         if account:
             account = account.strip()
@@ -3243,7 +3261,8 @@ class Runescape(commands.Cog):
 
                 with open('storage/league.json', 'w') as f:
                     json.dump(self.gamer_dict, f, indent=1)
-                return await interaction.response.send_message(f"Account has successfully been added\n" + "\n".join(list_of_accounts))
+                return await interaction.response.send_message(
+                    f"Account has successfully been added\n" + "\n".join(list_of_accounts))
 
             case 3:
                 if account is None:
@@ -3256,7 +3275,6 @@ class Runescape(commands.Cog):
                 with open('storage/league.json', 'w') as f:
                     json.dump(self.gamer_dict, f, indent=1)
                 return await interaction.response.send_message(f"{account}\n has successfully been removed")
-
 
     @commands.group()
     async def osrs(self, ctx, *args):
@@ -3351,7 +3369,6 @@ class Runescape(commands.Cog):
     @commands.command(aliases=["spread"], hidden=True)
     async def manually_update_spreadsheet(self, ctx):
         await self.run_spreadsheets()
-        await self.collection()
         return await ctx.send("All done!")
 
     @commands.command(hidden=True)
@@ -3454,7 +3471,7 @@ class Runescape(commands.Cog):
     async def lookup(self, ctx, *args):
         gamer = " ".join(args)
 
-        status, stats = await get_stats(gamer)
+        status, osrs_hiscores = await get_stats(gamer)
         if status != 200:
             if status == 404:
                 return await ctx.send(f"could not find data for user `{gamer}`")
@@ -3462,36 +3479,81 @@ class Runescape(commands.Cog):
                 print(f"error in !lookup\n"
                       f"status code {status}")
                 return
+        url = f"https://sync.runescape.wiki/runelite/player/{gamer}/STANDARD"
+        status, gamer_info = await request(url,
+                                           headers={"User-Agent": "Message me on discord if you got beef - moists0ck"})
+        if status == 200:
+            wiki_sync_skills = gamer_info["levels"]
+            skills = ['Overall',
+                      'Attack',
+                      'Defence',
+                      'Strength',
+                      'Hitpoints',
+                      'Ranged',
+                      'Prayer',
+                      'Magic',
+                      'Cooking',
+                      'Woodcutting',
+                      'Fletching',
+                      'Fishing',
+                      'Firemaking',
+                      'Crafting',
+                      'Smithing',
+                      'Mining',
+                      'Herblore',
+                      'Agility',
+                      'Thieving',
+                      'Slayer',
+                      'Farming',
+                      'Runecraft',
+                      'Hunter',
+                      'Construction']
+            total_level = 0
+            for skill in skills:
+                if skill == "Overall":
+                    continue
+                try:
+                    if osrs_hiscores[skill]["level"] < wiki_sync_skills[skill]:
+                        osrs_hiscores[skill]["level"] = wiki_sync_skills[skill]
 
-        await self.make_skills_page(stats, ctx)
+                    total_level += osrs_hiscores[skill]["level"]
+
+                except KeyError:
+                    osrs_hiscores[skill] = {"level": wiki_sync_skills[skill],
+                                            "color": (255, 0, 0)}
+                    total_level += osrs_hiscores[skill]["level"]
+
+            osrs_hiscores["Overall"] = {"level": total_level}
+
+        await self.make_skills_page(osrs_hiscores, ctx)
 
     @commands.command()
     @commands.cooldown(1, 60, commands.BucketType.default)
     async def minlevel(self, ctx):
         skills = ['Overall',
-              'Attack',
-              'Defence',
-              'Strength',
-              'Hitpoints',
-              'Ranged',
-              'Prayer',
-              'Magic',
-              'Cooking',
-              'Woodcutting',
-              'Fletching',
-              'Fishing',
-              'Firemaking',
-              'Crafting',
-              'Smithing',
-              'Mining',
-              'Herblore',
-              'Agility',
-              'Thieving',
-              'Slayer',
-              'Farming',
-              'Runecraft',
-              'Hunter',
-              'Construction']
+                  'Attack',
+                  'Defence',
+                  'Strength',
+                  'Hitpoints',
+                  'Ranged',
+                  'Prayer',
+                  'Magic',
+                  'Cooking',
+                  'Woodcutting',
+                  'Fletching',
+                  'Fishing',
+                  'Firemaking',
+                  'Crafting',
+                  'Smithing',
+                  'Mining',
+                  'Herblore',
+                  'Agility',
+                  'Thieving',
+                  'Slayer',
+                  'Farming',
+                  'Runecraft',
+                  'Hunter',
+                  'Construction']
         skills_dict = {}
         for table_number in range(0, 24):
             url = f"https://secure.runescape.com/m=hiscore_oldschool/a=12/overall?table={table_number}&rank=2000000#headerHiscores"
@@ -3516,7 +3578,7 @@ class Runescape(commands.Cog):
                     level_td = td.find_next('td', class_='left').find_next_sibling('td')
                     # Get the level associated with this <td> element
                     level = level_td.get_text(strip=True)
-                    skills_dict[skills[table_number]] = {'level': int(level)}
+                    skills_dict[skills[table_number]] = {'level': int(level.replace(",", ""))}
                     break
 
         await self.make_skills_page(skills_dict, ctx)
@@ -3563,7 +3625,6 @@ class Runescape(commands.Cog):
         font_level = ImageFont.load_default(font_size)
         font_total_level = ImageFont.load_default(10)
         total_level_color = (225, 232, 155)
-        text_color = (255, 255, 255)
 
         count = 0
         overall_number = 0
@@ -3582,6 +3643,12 @@ class Runescape(commands.Cog):
 
                     if skills[count] == "Hitpoints":
                         number = '10'
+
+                try:
+                    text_color = skills_dict[skills[count]]["color"]
+
+                except KeyError:
+                    text_color = (255, 255, 255)
 
                 if len(number) == 1:
                     next_column += 7
@@ -3801,7 +3868,8 @@ class Runescape(commands.Cog):
         distances = []
 
         for real_thing_in_list in list_to_use:
-            distances.append([real_thing_in_list, textdistance.Levenshtein()(real_thing_in_list.lower(), thing_that_need_spellcheck)])
+            distances.append([real_thing_in_list,
+                              textdistance.Levenshtein()(real_thing_in_list.lower(), thing_that_need_spellcheck)])
 
         return sorted(distances, key=lambda x: x[1])[0][0]
 
@@ -3818,8 +3886,8 @@ class Runescape(commands.Cog):
                 all_accounts.extend(osrs_accounts)
             except KeyError:
                 continue
-        today = datetime.now().strftime('%d%b%Y').upper()
-
+        _, today = formatted_yesterday_today()
+        all_accounts = list(set(all_accounts))
         for account in all_accounts:
             status, info = await request(
                 f"https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player={account}")
@@ -3840,6 +3908,54 @@ class Runescape(commands.Cog):
         with open("storage/osrs_account_data.json", 'w') as f:
             json.dump(osrs_account_data, f, indent=2)
 
+    @commands.command(aliases=["collect"], hidden=True)
+    async def man_collect(self, ctx):
+        if ctx.author.id != self.bot.settings.moist_id:
+            return await ctx.send("Shut the fuck up")
+
+        with open("storage/osrs_account_data.json", "r") as f:
+            osrs_account_data = json.load(f)
+
+        all_accounts = []
+        for gamer in self.gamer_dict['users']:
+            try:
+                osrs_accounts = self.gamer_dict['users'][gamer]['osrs']
+                all_accounts.extend(osrs_accounts)
+
+            except KeyError:
+                continue
+
+        _, today = formatted_yesterday_today()
+
+        for account in all_accounts:
+            account_dict = osrs_account_data.get(account, {})
+
+            try:
+                poopie_pants = account_dict[today]
+                continue
+
+            except KeyError:
+                status, info = await request(
+                    f"https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player={account}")
+
+                if status != 200:
+                    info = "-1,0,0 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1 -1,-1"
+                    if status == 404:
+                        print(f"status 404 in collection, skipping account {account} for data collection")
+                    else:
+                        print(f"error{status} in collection for {account}")
+
+                data = info.splitlines()
+                joined_data = ' '.join(data)
+                account_dict = osrs_account_data.get(account, {})
+                account_dict[today] = joined_data
+                osrs_account_data[account] = account_dict
+
+        with open("storage/osrs_account_data.json", 'w') as f:
+            json.dump(osrs_account_data, f, indent=2)
+
+        await ctx.send("All done :D")
+
     @commands.command()
     async def yest(self, ctx, *args):
         try:
@@ -3851,11 +3967,7 @@ class Runescape(commands.Cog):
         with open("storage/osrs_account_data.json", 'r') as f:
             data = json.load(f)
 
-        today = datetime.now()
-        yesterday = today - timedelta(days=1)
-        today -= timedelta(days=0)
-        formatted_yesterday = yesterday.strftime('%d%b%Y').upper()
-        formatted_today = today.strftime('%d%b%Y').upper()
+        formatted_yesterday, formatted_today = formatted_yesterday_today()
 
         for gamer in gamers:
             try:
@@ -3887,7 +3999,7 @@ class Runescape(commands.Cog):
 
     # noinspection PyUnresolvedReferences
     @app_commands.command(name="quest", description="look up if an osrs account has done a certain quest")
-    async def slash_quest(self, interaction: discord.Interaction, quest_name: str, username: str=None,):
+    async def slash_quest(self, interaction: discord.Interaction, quest_name: str, username: str = None):
         if username:
             gamers = [username]
         else:
@@ -3899,14 +4011,16 @@ class Runescape(commands.Cog):
                 gamers = self.gamer_dict['users'][str(interaction.user.id)]['osrs']
 
             except KeyError:
-                return await interaction.response.send_message(f"Either add your account to the bot with !osrs or add a name")
+                return await interaction.response.send_message(
+                    f"Either add your account to the bot with !osrs or add a name")
 
         output_msg = ''
         for gamer in gamers:
 
             url = f"https://sync.runescape.wiki/runelite/player/{gamer}/STANDARD"
 
-            status, gamer_info = await request(url, headers={"User-Agent": "Message me on discord if you got beef - moists0ck"})
+            status, gamer_info = await request(url, headers={
+                "User-Agent": "Message me on discord if you got beef - moists0ck"})
 
             if status != 200:
                 if status == 400:
@@ -3921,10 +4035,12 @@ class Runescape(commands.Cog):
             match int(quests[real_quest_name]):
 
                 case 0:
-                    output_msg += f"{gamer} has not started {real_quest_name} :(\n"
+                    output_msg += f"{gamer} has not started {real_quest_name} :(\n\n"
+                    output_msg += await self.quest_reqs(real_quest_name, gamer_info)
 
                 case 1:
                     output_msg += f"{gamer} has started {real_quest_name} but has not finished :/\n"
+                    output_msg += await self.quest_reqs(real_quest_name, gamer_info)
 
                 case 2:
                     output_msg += f"{gamer} has finished {real_quest_name} :D\n"
@@ -3933,6 +4049,252 @@ class Runescape(commands.Cog):
                     output_msg += "0_0\n"
 
         await interaction.response.send_message(output_msg)
+
+    # noinspection PyUnresolvedReferences
+    @app_commands.command(name="slayer", description="slayer monsters u can get")
+    async def slayer_poop(self, interaction: discord.Interaction, gamer: str):
+        url = f"https://sync.runescape.wiki/runelite/player/{gamer}/STANDARD"
+
+        status, gamer_info = await request(url,
+                                           headers={"User-Agent": "Message me on discord if you got beef - moists0ck"})
+        if status != 200:
+            if status == 400:
+                return await interaction.response.send_message(f"No information was found for the user: `{gamer}`")
+            return await interaction.response.send_message(f"something went horribly wrong - error {status}")
+
+    # noinspection PyUnresolvedReferences
+    @app_commands.command(name="maxquest", description="show quests you can do with current level")
+    async def max_quest(self, interaction: discord.Interaction, gamer: str):
+        url = f"https://sync.runescape.wiki/runelite/player/{gamer}/STANDARD"
+
+        status, gamer_info = await request(url,
+                                           headers={"User-Agent": "Message me on discord if you got beef - moists0ck"})
+        completed_quests = gamer_info["quests"]
+        if status != 200:
+            if status == 400:
+                return await interaction.response.send_message(f"No information was found for the user: `{gamer}`")
+            return await interaction.response.send_message(f"something went horribly wrong - error {status}")
+
+        with open("storage/quest_req.json", "r") as f:
+            quest_reqs_dict = json.load(f)
+
+        greenlight_quests = []
+        for quest in quest_reqs_dict.keys():
+            if await self.can_do_quest_without_training(quest, gamer_info) and completed_quests[quest] in [0, 1]:
+                greenlight_quests.append(quest)
+
+        msg = "\n".join(sorted(greenlight_quests))
+        msg += f"\nQuests to do: {len(greenlight_quests)}"
+        return await interaction.response.send_message(msg)
+
+    async def quest_reqs(self, main_quest, gamer_info):
+        with open("storage/quest_req.json", "r") as f:
+            quest_reqs_dict = json.load(f)
+
+        quest_reqs_for_the_quest_in_question = quest_reqs_dict[main_quest]
+
+        levels = gamer_info["levels"]
+        gamers_quest_status = gamer_info["quests"]
+
+        missing_reqs = ""
+
+        missing_quests = []
+        for quest in quest_reqs_for_the_quest_in_question["quests"]:
+            if gamers_quest_status[quest] in [0, 1]:
+                missing_quests.append(quest)
+
+        for side_quest in missing_quests:
+            for quest_needed_for_side_quest in quest_reqs_dict[side_quest]["quests"]:
+                if gamers_quest_status[quest_needed_for_side_quest] in [0, 1]:
+                    missing_quests.append(quest_needed_for_side_quest)
+
+        missing_quests = list(set(missing_quests))
+        missing_quests.append(main_quest)
+
+        missing_levels = {}
+        for quest in missing_quests:
+            quest_reqs = quest_reqs_dict[quest]
+            for skill in quest_reqs["skills"].keys():
+                elder_req = missing_levels.get(skill, 1)
+                level_needed = quest_reqs["skills"][skill]
+                if level_needed > elder_req and level_needed > levels[skill]:
+                    missing_levels[skill] = level_needed
+
+        missing_quests.remove(main_quest)
+
+        if missing_levels:
+            missing_reqs += f"Levels needed:\n"
+            for skill, level in missing_levels.items():
+                missing_reqs += f"{level} {skill}\n"
+
+        if missing_quests:
+            missing_reqs += "\nQuests needed:\n"
+            missing_reqs += "\n".join(missing_quests) + "\n"
+
+        if not missing_reqs:
+            missing_reqs = "You have all the requirements needed!\n"
+
+        return missing_reqs
+
+    # If bored rewrite this function to be cleaner
+    async def check_reqs(self, quest_reqs_for_the_quest_in_question, gamer_info, lumby_elite=False):
+        with open("storage/quest_req.json", "r") as f:
+            quest_reqs_dict = json.load(f)
+
+        levels = gamer_info["levels"]
+        gamers_quest_status = gamer_info["quests"]
+
+        missing_reqs = ""
+
+        missing_quests = []
+        for quest in quest_reqs_for_the_quest_in_question["quests"]:
+            if gamers_quest_status[quest] in [0, 1]:
+                missing_quests.append(quest)
+
+        for side_quest in missing_quests:
+            for quest_needed_for_side_quest in quest_reqs_dict[side_quest]["quests"]:
+                if gamers_quest_status[quest_needed_for_side_quest] in [0, 1]:
+                    missing_quests.append(quest_needed_for_side_quest)
+
+        missing_quests = list(set(missing_quests))
+
+        if lumby_elite:
+            all_quests = [
+        "Cook's Assistant", "Demon Slayer", "The Restless Ghost", "Romeo & Juliet", "Sheep Shearer",
+        "Shield of Arrav", "Ernest the Chicken", "Vampyre Slayer", "Imp Catcher", "Prince Ali Rescue",
+        "Doric's Quest", "Black Knights' Fortress", "Witch's Potion", "The Knight's Sword", "Goblin Diplomacy",
+        "Pirate's Treasure", "Dragon Slayer I", "Rune Mysteries", "Misthalin Mystery", "The Corsair Curse",
+        "X Marks the Spot", "Below Ice Mountain", "Druidic Ritual", "Lost City", "Witch's House",
+        "Merlin's Crystal", "Heroes' Quest", "Scorpion Catcher", "Family Crest", "Tribal Totem", "Fishing Contest",
+        "Monk's Friend", "Temple of Ikov", "Clock Tower", "Holy Grail", "Tree Gnome Village", "Fight Arena",
+        "Hazeel Cult", "Sheep Herder", "Plague City", "Sea Slug", "Waterfall Quest", "Biohazard", "Jungle Potion",
+        "The Grand Tree", "Shilo Village", "Underground Pass", "Observatory Quest", "The Tourist Trap", "Watchtower",
+        "Dwarf Cannon", "Murder Mystery", "The Dig Site", "Gertrude's Cat", "Legends' Quest", "Big Chompy Bird Hunting",
+        "Elemental Workshop I", "Priest in Peril", "Nature Spirit", "Death Plateau", "Troll Stronghold",
+        "Tai Bwo Wannai Trio", "Regicide", "Eadgar's Ruse", "Shades of Mort'ton", "The Fremennik Trials",
+        "Horror from the Deep", "Throne of Miscellania", "Monkey Madness I", "Haunted Mine", "Troll Romance",
+        "In Search of the Myreque", "Creature of Fenkenstrain", "Roving Elves", "Ghosts Ahoy", "One Small Favour",
+        "Mountain Daughter", "Between a Rock...", "The Feud", "The Golem", "Desert Treasure I",
+        "Icthlarin's Little Helper",
+        "Tears of Guthix", "Zogre Flesh Eaters", "The Lost Tribe", "The Giant Dwarf", "Recruitment Drive",
+        "Mourning's End Part I", "Forgettable Tale...", "Garden of Tranquillity", "A Tail of Two Cats", "Wanted!",
+        "Mourning's End Part II", "Rum Deal", "Shadow of the Storm", "Making History", "Ratcatchers",
+        "Spirits of the Elid",
+        "Devious Minds", "The Hand in the Sand", "Enakhra's Lament", "Cabin Fever", "Fairytale I - Growing Pains",
+        "Recipe for Disaster", "In Aid of the Myreque", "A Soul's Bane", "Rag and Bone Man I", "Swan Song",
+        "Royal Trouble",
+        "Death to the Dorgeshuun", "Fairytale II - Cure a Queen", "Lunar Diplomacy", "The Eyes of Glouphrie",
+        "Darkness of Hallowvale", "The Slug Menace", "Elemental Workshop II", "My Arm's Big Adventure",
+        "Enlightened Journey",
+        "Eagles' Peak", "Animal Magnetism", "Contact!", "Cold War", "The Fremennik Isles", "Tower of Life",
+        "The Great Brain Robbery", "What Lies Below", "Olaf's Quest", "Another Slice of H.A.M.", "Dream Mentor",
+        "Grim Tales", "King's Ransom", "Monkey Madness II", "Client of Kourend", "Rag and Bone Man II", "Bone Voyage",
+        "The Queen of Thieves", "The Depths of Despair", "Dragon Slayer II", "Tale of the Righteous", "A Taste of Hope",
+        "Making Friends with My Arm", "The Forsaken Tower", "The Ascent of Arceuus", "Song of the Elves",
+        "The Fremennik Exiles", "Sins of the Father", "A Porcine of Interest", "Getting Ahead",
+        "A Night at the Theatre",
+        "A Kingdom Divided", "Land of the Goblins", "Temple of the Eye", "Beneath Cursed Sands", "Sleeping Giants",
+        "The Garden of Death", "Secrets of the North", "Desert Treasure II - The Fallen Empire",
+        "The Path of Glouphrie",
+        "Children of the Sun", "Defender of Varrock", "Twilight's Promise", "At First Light", "Perilous Moons",
+        "The Ribbiting Tale of a Lily Pad Labour Dispute"
+    ]
+            missing_quests = []
+            quest_count = 0
+            for quest in gamers_quest_status:
+                if gamers_quest_status[quest] != 2 and quest in all_quests:
+                    missing_quests.append(quest)
+                    quest_count += 1
+
+        missing_levels = {}
+        for quest in missing_quests:
+            try:
+                quest_reqs = quest_reqs_dict[quest]
+
+            except KeyError:
+                continue
+
+            for skill in quest_reqs["skills"].keys():
+                elder_req = missing_levels.get(skill, 1)
+                level_needed = quest_reqs["skills"][skill]
+                if level_needed > elder_req and level_needed > levels[skill]:
+                    missing_levels[skill] = level_needed
+
+        # I AM SO SORRY THIS IS SUCH DUMB CODE
+        # I just dont know how to format this at the current moment in time - 5/3/2024 11pm
+        for skill in quest_reqs_for_the_quest_in_question["skills"].keys():
+            elder_req = missing_levels.get(skill, 1)
+            level_needed = quest_reqs_for_the_quest_in_question["skills"][skill]
+            if level_needed > elder_req and level_needed > levels[skill]:
+                missing_levels[skill] = level_needed
+
+        if missing_levels:
+            missing_reqs += f"Levels needed:\n"
+            for skill, level in missing_levels.items():
+                missing_reqs += f"{level} {skill}\n"
+
+        if missing_quests:
+            missing_reqs += "\nQuests needed:\n"
+
+            if lumby_elite:
+                if quest_count > 1:
+                    missing_reqs += f"{quest_count} quests left >:)"
+
+                elif quest_count == 1:
+                    missing_reqs += f"{quest_count} quest left :o"
+
+                else:
+                    missing_reqs += f"{quest_count} quests left :D"
+
+            else:
+                missing_reqs += "\n".join(missing_quests) + "\n"
+
+        if not missing_reqs:
+            missing_reqs = "You have all the requirements needed!\n"
+
+        return missing_reqs
+
+    async def combine_reqs(self, list_of_reqs):
+
+        levels_needed = {}
+        quests = []
+
+        for req_list in list_of_reqs:
+            for skill in req_list["skills"].keys():
+                elder_req = levels_needed.get(skill, 1)
+
+                if req_list["skills"][skill] > elder_req:
+                    levels_needed[skill] = req_list["skills"][skill]
+
+            quests.extend(req_list["quests"])
+
+        quests = list(set(quests))
+
+        return {"skills": levels_needed,
+                "quests": quests}
+
+    async def can_do_quest_without_training(self, quest, gamer_info, inner=False):
+        with open("storage/quest_req.json", "r") as f:
+            quest_reqs_dict = json.load(f)
+        everything_is_okay = True
+        quest_reqs_for_the_quest_in_question = quest_reqs_dict[quest]
+        levels = gamer_info["levels"]
+        quest_statuses = gamer_info["quests"]
+
+        for skill in quest_reqs_for_the_quest_in_question["skills"].keys():
+            level_needed = quest_reqs_for_the_quest_in_question["skills"][skill]
+            if level_needed > levels[skill]:
+                everything_is_okay = False
+
+        if inner:
+            return everything_is_okay
+
+        for quest in quest_reqs_for_the_quest_in_question["quests"]:
+            if quest_statuses[quest] in [0, 1]:
+                if not await self.can_do_quest_without_training(quest, gamer_info, inner=True):
+                    everything_is_okay = False
+
+        return everything_is_okay
 
     @commands.command(aliases=["q"])
     async def quest(self, ctx, *args):
@@ -3946,7 +4308,8 @@ class Runescape(commands.Cog):
 
             url = f"https://sync.runescape.wiki/runelite/player/{gamer}/STANDARD"
 
-            status, gamer_info = await request(url, headers={"User-Agent": "Message me on discord if you got beef - moists0ck"})
+            status, gamer_info = await request(url, headers={
+                "User-Agent": "Message me on discord if you got beef - moists0ck"})
 
             if status != 200:
                 return await ctx.send(f"something went horribly wrong - error {status}")
@@ -3973,12 +4336,157 @@ class Runescape(commands.Cog):
 
             await ctx.send(output_msg)
 
+    @commands.command()
+    async def vyre(self, ctx, *args):
+        today = False
+        if " ".join(args) == "t":
+            today = True
+
+        vyre_accounts = ["moisty s0ck",
+                         "silly gamer",
+                         "purple mouse",
+                         "chris4a4a4"]
+
+        with open("storage/osrs_account_data.json", 'r') as f:
+            data = json.load(f)
+
+        formatted_yesterday, formatted_today = formatted_yesterday_today()
+
+        total_kills = 0
+        if today:
+            msg = f"Vyrewatch kills for {formatted_today}\n"
+        else:
+            msg = f"Vyrewatch kills for {formatted_yesterday}\n"
+        for gamer in vyre_accounts:
+            try:
+                yesterday_stats = levels_wrapper(data[gamer][formatted_yesterday].split(" "))
+                today_stats = levels_wrapper(data[gamer][formatted_today].split(" "))
+
+            except KeyError as e:
+                await ctx.send(f"Information for `{e.args[0]}` is not available")
+                continue
+
+            if today:
+
+                status, stats_dict = await get_stats(gamer)
+
+                if status != 200:
+                    print(f"Error in command !max: {status}\n"
+                          f"account - {gamer} -")
+                    return
+                yesterday_stats = today_stats
+                today_stats = stats_dict
+                formatted_yesterday = formatted_today
+
+            difference = []
+
+            for stat in yesterday_stats.keys():
+
+                dif_xp = int(today_stats[stat]['xp']) - int(yesterday_stats[stat]['xp'])
+
+                if dif_xp:
+                    difference.append([stat, dif_xp])
+
+            if not difference:
+                await ctx.send(f"{gamer} gained NO xp on {formatted_yesterday}\n")
+                continue
+
+            xp_gained = 0
+            for dif in difference:
+                skill = dif[0]
+                xp = dif[1]
+                if skill != "Strength" and skill != "Attack" and skill != "Defence":
+                    continue
+
+                xp_gained += xp
+
+            vyre_kills = floor(xp_gained / 600)
+            msg += f"{gamer}: {vyre_kills:,}\n"
+            total_kills += vyre_kills
+
+        msg += f"Total kills: {total_kills:,}"
+
+        await ctx.send(msg)
+
+    @app_commands.command(name="diary", description="check requirements")
+    @app_commands.choices(area=[
+        discord.app_commands.Choice(name='Ardougne', value=1),
+        discord.app_commands.Choice(name='Desert', value=2),
+        discord.app_commands.Choice(name='Falador', value=3),
+        discord.app_commands.Choice(name='Fremennik', value=4),
+        discord.app_commands.Choice(name='Kandarin', value=5),
+        discord.app_commands.Choice(name='Karamja', value=6),
+        discord.app_commands.Choice(name='Kourend & Kebos', value=7),
+        discord.app_commands.Choice(name='Lumbridge & Draynor', value=8),
+        discord.app_commands.Choice(name='Morytania', value=9),
+        discord.app_commands.Choice(name='Varrock', value=10),
+        discord.app_commands.Choice(name='Western Provinces', value=11),
+        discord.app_commands.Choice(name='Wilderness', value=12)
+    ]
+    )
+    @app_commands.choices(tier=[
+        discord.app_commands.Choice(name='Easy', value=1),
+        discord.app_commands.Choice(name='Medium', value=2),
+        discord.app_commands.Choice(name='Hard', value=3),
+        discord.app_commands.Choice(name='Elite', value=4)
+    ]
+    )
+    @app_commands.guild_only()
+    async def diaries(self, interaction: discord.Interaction, area: discord.app_commands.Choice[int],
+                      tier: discord.app_commands.Choice[int],
+                      gamer: str):
+        url = f"https://sync.runescape.wiki/runelite/player/{gamer}/STANDARD"
 
 
+        status, gamer_info = await request(url,
+                                           headers={"User-Agent": "Message me on discord if you got beef - moists0ck"})
+        if status != 200:
+            if status == 400:
+                return await interaction.response.send_message(f"No information was found for the user: `{gamer}`")
+            return await interaction.response.send_message(f"something went horribly wrong - error {status}")
 
+        if gamer_info['achievement_diaries'][area.name][tier.name]['complete'] and False not in gamer_info['achievement_diaries'][area.name][tier.name]["tasks"]:
+            msg = f"{gamer} has completed the {area.name} {tier.name} :)"
+            return await interaction.response.send_message(msg)
 
+        msg = f"{gamer} has not completed the {area.name} {tier.name} :(\n\n"
 
+        with open("storage/diary_reqs.json", "r") as f:
+            diary_reqs_dict = json.load(f)
 
+        match tier.value:
+
+            case 1:
+                msg += await self.check_reqs(diary_reqs_dict[area.name]["Easy"], gamer_info)
+
+            case 2:
+                reqs_needed = await self.combine_reqs([diary_reqs_dict[area.name]["Easy"],
+                                                       diary_reqs_dict[area.name]["Medium"]])
+                msg += await self.check_reqs(reqs_needed, gamer_info)
+
+            case 3:
+                reqs_needed = await self.combine_reqs([diary_reqs_dict[area.name]["Easy"],
+                                                       diary_reqs_dict[area.name]["Medium"],
+                                                       diary_reqs_dict[area.name]["Hard"]])
+                msg += await self.check_reqs(reqs_needed, gamer_info)
+
+            case 4:
+                reqs_needed = await self.combine_reqs([diary_reqs_dict[area.name]["Easy"],
+                                                       diary_reqs_dict[area.name]["Medium"],
+                                                       diary_reqs_dict[area.name]["Hard"],
+                                                       diary_reqs_dict[area.name]["Elite"]])
+                if area.name == "Lumbridge & Draynor":
+                    lumby = True
+
+                else:
+                    lumby = False
+
+                msg += await self.check_reqs(reqs_needed, gamer_info, lumby)
+
+            case _:
+                return await interaction.response.send_message("FUCK")
+
+        return await interaction.response.send_message(msg)
 
 
 async def setup(bot):

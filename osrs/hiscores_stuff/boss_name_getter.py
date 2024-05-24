@@ -19,6 +19,9 @@ async def main():
 
     while True:
         status, text = await get_page(page_number)
+        if status != 200:
+            print(f"error {status}: in getting boss names updated - page number {page_number}")
+            return
         boss_name = name_of_boss(text)
         name_of_bosses.append(boss_name)
         page_number += 1

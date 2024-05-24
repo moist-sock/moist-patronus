@@ -1,9 +1,10 @@
 import asyncio
 import datetime
 import json
+import discord
 
 import textdistance
-from discord import Embed
+from discord import Embed, app_commands
 from discord.ext import commands
 
 from util.async_request import request
@@ -12,15 +13,21 @@ from util.time_functions import time_ago, run_half_hourly_task, run_daily_task
 from pprint import pprint
 import re
 
-def ge_tracker_url_gen(item):
 
+class FakeChoice:
+    def __init__(self):
+        self.name = "Bought"
+
+
+def ge_tracker_url_gen(item):
     # Use regular expression to replace anything within parentheses
-    item = re.sub(r'\((.*?)\)', r'\1', item).lower()
+    item = re.sub(r'\((.*?)\)', r'-\1', item).lower()
 
     # Replace spaces and single quotes with hyphens
-    item = item.replace(" ", "-").replace("'", "-")
+    item = item.replace(" ", "-").replace("'", "-").replace("/", "-").replace("--", "-")
 
     return f"https://www.ge-tracker.com/item/{item}"
+
 
 class Getracker(commands.Cog):
     def __init__(self, bot):
@@ -288,94 +295,36 @@ class Getracker(commands.Cog):
     async def all_item_price_with_volume(self):
         return await self.ge_api_request("https://prices.runescape.wiki/api/v1/osrs/5m")
 
-    @commands.command()
-    async def cry(self, ctx, *args):
-        if args:
-            check = args[0]
-
-        else:
-            check = False
-        if check == "2":
-            items_sold = {"inq": {"name": "Inquisitor's armour set",
-                                  "price": 172_600_000,
-                                  "id": 24488}
-                          }
-
-            items_bought = {"weapon_seed": {"price": 90_875_000,
-                                            "amount": 100,
-                                            "name": "Enhanced crystal weapon seed",
-                                            "id": 25859}}
-        else:
-            items_sold = {"tbow": {"name": "Twisted bow",
-                                   "price": 1_510_000_000,
-                                   "id": 20997},
-                          "shadow": {"price": 1_338_000_000,
-                                     "name": "Tumeken's shadow (uncharged)",
-                                     "id": 27277},
-                          "acb": {"price": 51_480_000,
-                                  "name": "Armadyl crossbow",
-                                  "id": 11785},
-                          "zvambs": {"price": 156_420_000,
-                                     "name": "Zaryte vambraces",
-                                     "id": 26235},
-                          "masori": {"price": 222_750_000,
-                                     "name": "Masori armour set (f)",
-                                     "id": 27355},
-                          "venny_bow": {"price": 26_081_101,
-                                        "name": "Venator bow (uncharged)",
-                                        "id": 27612},
-                          "virtus_top": {"price": 72_634_844,
-                                         "name": "Virtus robe top",
-                                         "id": 26243},
-                          "virtus_bottom": {"price": 30_135_600,
-                                            "name": "Virtus robe bottom",
-                                            "id": 26245}}
-
-            items_bought = {"armour_seed": {"price": 4_054_568,
-                                            "amount": 658,
-                                            "name": "Crystal armour seed",
-                                            "id": 23956},
-                            "weapon_seed": {"price": 90_850_000,
-                                            "amount": 8,
-                                            "name": "Enhanced crystal weapon seed",
-                                            "id": 25859}}
+    async def cry(self, investment_dict):
+        items_sold = investment_dict["items_sold"]
+        items_bought = investment_dict["items_bought"]
 
         status, items_prices = await self.all_item_price_with_most_recent_transaction()
 
         if status != 200:
             print(f"error in cry, {status}")
-            return await ctx.send("error in api call")
+            return
 
         items_prices = items_prices["data"]
 
         lowprofit = 0
         highprofit = 0
-        # 118_483_832
         items_sold_msg = ""
         items_bought_msg = ""
         for key in items_sold.keys():
             items_sold[key]["currentlow"] = items_prices[str(items_sold[key]["id"])]["low"]
             items_sold[key]["currenthigh"] = items_prices[str(items_sold[key]["id"])]["high"]
-            if check == "2":
-                items_sold[key]["highprofit"] = (items_sold[key]["price"] - items_sold[key]["currentlow"]) * 50
-                items_sold[key]["lowprofit"] = (items_sold[key]["price"] - items_sold[key]["currenthigh"]) * 50
+            items_sold[key]["highprofit"] = items_sold[key]["price"] - items_sold[key]["currentlow"]
+            items_sold[key]["lowprofit"] = items_sold[key]["price"] - items_sold[key]["currenthigh"]
 
-            else:
-                items_sold[key]["highprofit"] = items_sold[key]["price"] - items_sold[key]["currentlow"]
-                items_sold[key]["lowprofit"] = items_sold[key]["price"] - items_sold[key]["currenthigh"]
-
-            lowprofit += items_sold[key]["lowprofit"]
-            highprofit += items_sold[key]["highprofit"]
+            lowprofit += items_sold[key]["lowprofit"] * items_sold[key]["amount"]
+            highprofit += items_sold[key]["highprofit"] * items_sold[key]["amount"]
 
             items_sold_msg += f"{items_sold[key]['name']}: {items_sold[key]['lowprofit']:,} | {items_sold[key]['highprofit']:,}\n"
 
         for key in items_bought.keys():
-            if key == "weapon_seed" and args != "2":
-                lowprice = 118_483_832
-                highprice = 118_483_832
-            else:
-                lowprice = items_prices[str(items_bought[key]["id"])]["low"]
-                highprice = items_prices[str(items_bought[key]["id"])]["high"]
+            lowprice = items_prices[str(items_bought[key]["id"])]["low"]
+            highprice = items_prices[str(items_bought[key]["id"])]["high"]
             items_bought[key]["currentlow"] = lowprice
             items_bought[key]["currenthigh"] = highprice
             items_bought[key]["lowprofit"] = int(lowprice - items_bought[key]["price"] - self.tax(lowprice)) * \
@@ -391,9 +340,125 @@ class Getracker(commands.Cog):
             highprofit += items_bought[key]["highprofit"]
             items_bought_msg += f"{items_bought[key]['name']}: {items_bought[key]['lowprofit']:,} | {items_bought[key]['highprofit']:,} | {items_bought[key]['lowroi']}%-{items_bought[key]['highroi']}%\n"
 
-        return await ctx.send(f"worst case: {lowprofit:,}\nbest case: {highprofit:,}\n\n"
-                              f"{items_bought_msg}\n"
-                              f"{items_sold_msg}")
+        return f"worst case: {lowprofit:,}\nbest case: {highprofit:,}\n\n{items_bought_msg}\n{items_sold_msg}"
+
+    @app_commands.command(name="invest", description="track investments :D")
+    @app_commands.describe(initial='Options to choose from')
+    @app_commands.choices(initial=[
+        discord.app_commands.Choice(name='View', value=1),
+        discord.app_commands.Choice(name='Add', value=2),
+        discord.app_commands.Choice(name='Remove', value=3)
+    ])
+    @app_commands.choices(transaction=[
+        discord.app_commands.Choice(name="Bought", value=1),
+        discord.app_commands.Choice(name="Sold", value=2)
+    ])
+    @app_commands.guild_only()
+    async def invest_slash(self, interaction: discord.Interaction, initial: discord.app_commands.Choice[int],
+                           investment: str,
+                           item: str = None,
+                           amount: str = None,
+                           price: str = None,
+                           transaction: discord.app_commands.Choice[int] = None):
+
+        if transaction is None:
+            transaction = FakeChoice()
+
+        if item is not None:
+            item = await self.get_real_item(item)
+
+        try:
+            with open("storage/investments.json", "r") as f:
+                investment_dict = json.load(f)
+
+        except FileNotFoundError:
+            investment_dict = {}
+
+        try:
+            real_investment = investment_dict[investment]
+
+        except KeyError:
+            if initial.name in ["View", "Remove"]:
+                return await interaction.response.send_message(f"No tracked investment with the name `{investment}`")
+
+            real_investment = {}
+
+        match initial.name:
+
+            case "View":
+                msg = await self.cry(real_investment)
+                return await interaction.response.send_message(msg)
+            case "Add":
+                if item is None or amount is None or price is None:
+                    return interaction.response.send_message(
+                        f"If youre gonna add youre gonna need to give me item, amount and price")
+                real_investment = await self.add_investment(real_investment, item, amount, price, transaction.name)
+                await self.save_investment(investment_dict, real_investment, investment)
+                return await interaction.response.send_message(
+                    f"Sucessfully added {transaction.name} {item} to investment {investment}")
+
+            case "Remove":
+                try:
+                    real_investment = await self.remove_investment(real_investment, item, transaction.name)
+
+                except KeyError:
+                    return await interaction.response.send_message(
+                        f"Could not remove {item} from the {transaction.name} portion of the investment file {investment}")
+
+                await self.save_investment(investment_dict, real_investment, investment)
+                return await interaction.response.send_message(
+                    f"Successfully removed {item} from the {transaction.name} portion of the investment file {investment}")
+
+    async def add_investment(self, real_investment, item, amount, price, buy_or_sell):
+        # items_sold = {}
+        # items_bought = {"tbow": {"price": 1_607_000_000,
+        #                          "amount": 7,
+        #                          "name": "Twisted bow",
+        #                         "id": 20997}
+        #                 }
+
+        items_bought = real_investment.get("items_bought", {})
+        items_sold = real_investment.get("items_sold", {})
+
+        price = price.replace(",", "")
+        amount = amount.replace(",", "")
+
+        if buy_or_sell == "Bought":
+            items_bought[item] = {"price": int(price),
+                                       "amount": int(amount),
+                                       "name": item,
+                                       "id": self.items[item]["id"]
+                                  }
+        else:
+            items_sold[item] = {"price": int(price),
+                                     "amount": int(amount),
+                                     "name": item,
+                                     "id": self.items[item]["id"]
+                                }
+        real_investment["items_bought"] = items_bought
+        real_investment["items_sold"] = items_sold
+        return real_investment
+
+    async def remove_investment(self, real_investment, item, bought_or_sold):
+        item = await self.get_real_item(item)
+        if bought_or_sold == "Bought":
+            del real_investment["items_bought"][item]
+        elif bought_or_sold == "Sold":
+            del real_investment["items_sold"][item]
+        else:
+            raise KeyError
+
+    async def save_investment(self, whole_investment_dict, lil_investment_dict, name_of_investment):
+        whole_investment_dict[name_of_investment] = lil_investment_dict
+        with open("storage/investments.json", "w") as f:
+            json.dump(whole_investment_dict, f, indent=2)
+
+    async def get_real_item(self, item):
+        distances = []
+        for real_item in self.items:
+            distances.append([real_item, textdistance.Levenshtein()(real_item.lower(), item)])
+
+        return sorted(distances, key=lambda x: x[1])[0][0]
 
     def tax(self, price):
         tax = price * 0.01
@@ -401,14 +466,6 @@ class Getracker(commands.Cog):
             tax = 5_000_000
 
         return tax
-
-    # async def cry_loop(self):
-    #     await self.bot.wait_until_ready()
-    #     while self is self.bot.get_cog('Runescape'):
-    #         await run_half_hourly_task()
-
-    async def collect_cry(self):
-        pass
 
 
 async def setup(bot):

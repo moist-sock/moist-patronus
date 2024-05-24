@@ -98,7 +98,7 @@ class League(Cog):
         new_api_key = args[0].strip()
         for i in range(50):
             r = await async_request.request(
-                f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/moist s0ck',
+                f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/tfBEivf_x_p5_1U_5hNaJEOpuzi6gf0a_swK-yyKqO2NVF--8MwDqZTj0QsL9DjaY3DNhHiiaY-AYw',
                 headers={"X-Riot-Token": new_api_key})
 
             if r[0] == 200:
