@@ -57,10 +57,10 @@ class Getracker(commands.Cog):
             print(f"error in def update_items, {status}")
             return
 
-        item_dict = {}
+        updated_item_dict = {}
         id_to_item = {}
         for item in list_of_items:
-            item_dict[item["name"]] = {"examine": item.get("examine", None),
+            updated_item_dict[item["name"]] = {"examine": item.get("examine", None),
                                        "id": item.get("id", None),
                                        "members": item.get("members", None),
                                        "lowalch": item.get("lowalch", None),
@@ -70,18 +70,81 @@ class Getracker(commands.Cog):
                                        "icon": item.get("icon", None)}
             id_to_item[item.get("id", "fart")] = item.get("name", "poop")
 
-        if item_dict == self.items:
+        if updated_item_dict == self.items:
             return
 
-        await self.bot.get_user(self.bot.settings.moist_id).send("New items were added to osrs!!")
-        self.items = item_dict
+        all_items = set(list(updated_item_dict.keys()) + list(self.items.keys()))
+
+        added_items = []
+        removed_items = []
+        changed_items = {}
+
+        for item in all_items:
+            if item in updated_item_dict and item not in self.items:
+                added_items.append(item)
+                continue
+
+            if item not in updated_item_dict and item in self.items:
+                removed_items.append(item)
+                continue
+
+            if self.items[item] != updated_item_dict[item]:
+                different_keys = {}
+                for key in self.items[item].keys():
+                    if self.items[item][key] != updated_item_dict[item][key]:
+                        different_keys[key] = (self.items[item][key], updated_item_dict[item][key])
+
+                changed_items[item] = different_keys
+
+        msg = ""
+        if added_items:
+            msg += f"These items were added to runescape {', '.join(added_items)}\n"
+
+        if removed_items:
+            msg += f"These items were removed from runescape {', '.join(removed_items)}\n"
+
+        if changed_items:
+            msg += f"The following items were changed:\n"
+
+            for item, change_dict in changed_items.items():
+                msg += f"\n-- {item}\n"
+
+                for change, before_after in change_dict.items():
+                    msg += f"-- {change}: {before_after[0]} -> {before_after[1]}\n"
+
+
+        try:
+            await self.bot.get_user(self.bot.settings.moist_id).send(msg)
+
+        except discord.errors.HTTPException:
+            raw_msg = msg.splitlines()
+
+            msg_list = []
+            while raw_msg:
+                msg_short = ''
+
+                while raw_msg and len(msg_short) + len(raw_msg[0]) + 1 < 2000:
+                    line_to_add = f"{raw_msg.pop(0)}\n"
+                    msg_short += line_to_add
+
+                msg_list.append(msg_short)
+
+            for short_msg in msg_list:
+                await self.bot.get_user(self.bot.settings.moist_id).send(short_msg)
+
+        self.items = updated_item_dict
         self.items_id = id_to_item
 
         with open("storage/osrs_items.json", "w") as f:
-            json.dump(item_dict, f, indent=2)
+            json.dump(updated_item_dict, f, indent=2)
 
         with open("storage/osrs_item_id_dict.json", "w") as f:
             json.dump(id_to_item, f, indent=2)
+
+    @commands.command()
+    async def changes(self, ctx):
+        await ctx.send("you got it boss")
+        await self.update_items()
 
     @commands.command(aliases=['p'])
     async def price(self, ctx, *args):

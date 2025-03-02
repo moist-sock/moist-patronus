@@ -3476,9 +3476,8 @@ class Runescape(commands.Cog):
             if status == 404:
                 return await ctx.send(f"could not find data for user `{gamer}`")
             else:
-                print(f"error in !lookup\n"
-                      f"status code {status}")
-                return
+                return await ctx.send(f"error in !lookup\n"
+                                      f"status code {status}")
         url = f"https://sync.runescape.wiki/runelite/player/{gamer}/STANDARD"
         status, gamer_info = await request(url,
                                            headers={"User-Agent": "Message me on discord if you got beef - moists0ck"})
@@ -3608,14 +3607,14 @@ class Runescape(commands.Cog):
                   'Construction',
                   'Hunter']
 
-        image_url = "https://i.imgur.com/DRcMNA3.png"
-        status, image_data = await request(image_url)
+        image_url = "https://imgur.com/DRcMNA3.png"
+        status, image_data = await request(image_url, headers={"User-Agent": "Discord bot- moists0ck"})
 
         try:
             image = Image.open(image_data)
 
         except AttributeError:
-            return await ctx.send("picture broken")
+            return await ctx.send(f"{status} picture broken")
 
         draw = ImageDraw.Draw(image)
 
@@ -3807,11 +3806,14 @@ class Runescape(commands.Cog):
 
         soup = BeautifulSoup(html, "html.parser")
 
+        descprtion = soup.find('meta')['content']
+
         title = soup.title.string
         image_url = soup.find('img', {'alt': title, 'title': title})['src']
 
         embed = Embed(title=title,
-                      url=url)
+                      url=url,
+                      description=descprtion)
 
         embed.set_thumbnail(url="https://www.runescape.com/img/rsp777/social-share.jpg?1")
         embed.set_image(url=image_url)
@@ -3827,7 +3829,7 @@ class Runescape(commands.Cog):
     async def account_data_loop(self):
         await self.bot.wait_until_ready()
         while self is self.bot.get_cog('Runescape'):
-            await run_daily_task('00:00:45')
+            await run_daily_task('04:00:45', timezone='UTC')
             await self.collection()
 
     async def news_loop(self):
@@ -3970,12 +3972,21 @@ class Runescape(commands.Cog):
         formatted_yesterday, formatted_today = formatted_yesterday_today()
 
         for gamer in gamers:
-            try:
-                yesterday_stats = levels_wrapper(data[gamer][formatted_yesterday].split(" "))
-                today_stats = levels_wrapper(data[gamer][formatted_today].split(" "))
+            gamer_lower = gamer.lower()
 
-            except KeyError as e:
-                await ctx.send(f"Information for `{e.args[0]}` is not available")
+            matched_key = next((key for key in data if key.lower() == gamer_lower), None)
+
+            if matched_key:
+                try:
+                    yesterday_stats = levels_wrapper(data[matched_key][formatted_yesterday].split(" "))
+                    today_stats = levels_wrapper(data[matched_key][formatted_today].split(" "))
+                    gamer = matched_key
+
+                except KeyError as e:
+                    await ctx.send(f"Information for `{e.args[0]}` is not available")
+                    continue
+            else:
+                await ctx.send(f"No data found for `{gamer}`")
                 continue
 
             difference = []
@@ -4160,45 +4171,55 @@ class Runescape(commands.Cog):
 
         if lumby_elite:
             all_quests = [
-        "Cook's Assistant", "Demon Slayer", "The Restless Ghost", "Romeo & Juliet", "Sheep Shearer",
-        "Shield of Arrav", "Ernest the Chicken", "Vampyre Slayer", "Imp Catcher", "Prince Ali Rescue",
-        "Doric's Quest", "Black Knights' Fortress", "Witch's Potion", "The Knight's Sword", "Goblin Diplomacy",
-        "Pirate's Treasure", "Dragon Slayer I", "Rune Mysteries", "Misthalin Mystery", "The Corsair Curse",
-        "X Marks the Spot", "Below Ice Mountain", "Druidic Ritual", "Lost City", "Witch's House",
-        "Merlin's Crystal", "Heroes' Quest", "Scorpion Catcher", "Family Crest", "Tribal Totem", "Fishing Contest",
-        "Monk's Friend", "Temple of Ikov", "Clock Tower", "Holy Grail", "Tree Gnome Village", "Fight Arena",
-        "Hazeel Cult", "Sheep Herder", "Plague City", "Sea Slug", "Waterfall Quest", "Biohazard", "Jungle Potion",
-        "The Grand Tree", "Shilo Village", "Underground Pass", "Observatory Quest", "The Tourist Trap", "Watchtower",
-        "Dwarf Cannon", "Murder Mystery", "The Dig Site", "Gertrude's Cat", "Legends' Quest", "Big Chompy Bird Hunting",
-        "Elemental Workshop I", "Priest in Peril", "Nature Spirit", "Death Plateau", "Troll Stronghold",
-        "Tai Bwo Wannai Trio", "Regicide", "Eadgar's Ruse", "Shades of Mort'ton", "The Fremennik Trials",
-        "Horror from the Deep", "Throne of Miscellania", "Monkey Madness I", "Haunted Mine", "Troll Romance",
-        "In Search of the Myreque", "Creature of Fenkenstrain", "Roving Elves", "Ghosts Ahoy", "One Small Favour",
-        "Mountain Daughter", "Between a Rock...", "The Feud", "The Golem", "Desert Treasure I",
-        "Icthlarin's Little Helper",
-        "Tears of Guthix", "Zogre Flesh Eaters", "The Lost Tribe", "The Giant Dwarf", "Recruitment Drive",
-        "Mourning's End Part I", "Forgettable Tale...", "Garden of Tranquillity", "A Tail of Two Cats", "Wanted!",
-        "Mourning's End Part II", "Rum Deal", "Shadow of the Storm", "Making History", "Ratcatchers",
-        "Spirits of the Elid",
-        "Devious Minds", "The Hand in the Sand", "Enakhra's Lament", "Cabin Fever", "Fairytale I - Growing Pains",
-        "Recipe for Disaster", "In Aid of the Myreque", "A Soul's Bane", "Rag and Bone Man I", "Swan Song",
-        "Royal Trouble",
-        "Death to the Dorgeshuun", "Fairytale II - Cure a Queen", "Lunar Diplomacy", "The Eyes of Glouphrie",
-        "Darkness of Hallowvale", "The Slug Menace", "Elemental Workshop II", "My Arm's Big Adventure",
-        "Enlightened Journey",
-        "Eagles' Peak", "Animal Magnetism", "Contact!", "Cold War", "The Fremennik Isles", "Tower of Life",
-        "The Great Brain Robbery", "What Lies Below", "Olaf's Quest", "Another Slice of H.A.M.", "Dream Mentor",
-        "Grim Tales", "King's Ransom", "Monkey Madness II", "Client of Kourend", "Rag and Bone Man II", "Bone Voyage",
-        "The Queen of Thieves", "The Depths of Despair", "Dragon Slayer II", "Tale of the Righteous", "A Taste of Hope",
-        "Making Friends with My Arm", "The Forsaken Tower", "The Ascent of Arceuus", "Song of the Elves",
-        "The Fremennik Exiles", "Sins of the Father", "A Porcine of Interest", "Getting Ahead",
-        "A Night at the Theatre",
-        "A Kingdom Divided", "Land of the Goblins", "Temple of the Eye", "Beneath Cursed Sands", "Sleeping Giants",
-        "The Garden of Death", "Secrets of the North", "Desert Treasure II - The Fallen Empire",
-        "The Path of Glouphrie",
-        "Children of the Sun", "Defender of Varrock", "Twilight's Promise", "At First Light", "Perilous Moons",
-        "The Ribbiting Tale of a Lily Pad Labour Dispute"
-    ]
+                "Cook's Assistant", "Demon Slayer", "The Restless Ghost", "Romeo & Juliet", "Sheep Shearer",
+                "Shield of Arrav", "Ernest the Chicken", "Vampyre Slayer", "Imp Catcher", "Prince Ali Rescue",
+                "Doric's Quest", "Black Knights' Fortress", "Witch's Potion", "The Knight's Sword", "Goblin Diplomacy",
+                "Pirate's Treasure", "Dragon Slayer I", "Rune Mysteries", "Misthalin Mystery", "The Corsair Curse",
+                "X Marks the Spot", "Below Ice Mountain", "Druidic Ritual", "Lost City", "Witch's House",
+                "Merlin's Crystal", "Heroes' Quest", "Scorpion Catcher", "Family Crest", "Tribal Totem",
+                "Fishing Contest",
+                "Monk's Friend", "Temple of Ikov", "Clock Tower", "Holy Grail", "Tree Gnome Village", "Fight Arena",
+                "Hazeel Cult", "Sheep Herder", "Plague City", "Sea Slug", "Waterfall Quest", "Biohazard",
+                "Jungle Potion",
+                "The Grand Tree", "Shilo Village", "Underground Pass", "Observatory Quest", "The Tourist Trap",
+                "Watchtower",
+                "Dwarf Cannon", "Murder Mystery", "The Dig Site", "Gertrude's Cat", "Legends' Quest",
+                "Big Chompy Bird Hunting",
+                "Elemental Workshop I", "Priest in Peril", "Nature Spirit", "Death Plateau", "Troll Stronghold",
+                "Tai Bwo Wannai Trio", "Regicide", "Eadgar's Ruse", "Shades of Mort'ton", "The Fremennik Trials",
+                "Horror from the Deep", "Throne of Miscellania", "Monkey Madness I", "Haunted Mine", "Troll Romance",
+                "In Search of the Myreque", "Creature of Fenkenstrain", "Roving Elves", "Ghosts Ahoy",
+                "One Small Favour",
+                "Mountain Daughter", "Between a Rock...", "The Feud", "The Golem", "Desert Treasure I",
+                "Icthlarin's Little Helper",
+                "Tears of Guthix", "Zogre Flesh Eaters", "The Lost Tribe", "The Giant Dwarf", "Recruitment Drive",
+                "Mourning's End Part I", "Forgettable Tale...", "Garden of Tranquillity", "A Tail of Two Cats",
+                "Wanted!",
+                "Mourning's End Part II", "Rum Deal", "Shadow of the Storm", "Making History", "Ratcatchers",
+                "Spirits of the Elid",
+                "Devious Minds", "The Hand in the Sand", "Enakhra's Lament", "Cabin Fever",
+                "Fairytale I - Growing Pains",
+                "Recipe for Disaster", "In Aid of the Myreque", "A Soul's Bane", "Rag and Bone Man I", "Swan Song",
+                "Royal Trouble",
+                "Death to the Dorgeshuun", "Fairytale II - Cure a Queen", "Lunar Diplomacy", "The Eyes of Glouphrie",
+                "Darkness of Hallowvale", "The Slug Menace", "Elemental Workshop II", "My Arm's Big Adventure",
+                "Enlightened Journey",
+                "Eagles' Peak", "Animal Magnetism", "Contact!", "Cold War", "The Fremennik Isles", "Tower of Life",
+                "The Great Brain Robbery", "What Lies Below", "Olaf's Quest", "Another Slice of H.A.M.", "Dream Mentor",
+                "Grim Tales", "King's Ransom", "Monkey Madness II", "Client of Kourend", "Rag and Bone Man II",
+                "Bone Voyage",
+                "The Queen of Thieves", "The Depths of Despair", "Dragon Slayer II", "Tale of the Righteous",
+                "A Taste of Hope",
+                "Making Friends with My Arm", "The Forsaken Tower", "The Ascent of Arceuus", "Song of the Elves",
+                "The Fremennik Exiles", "Sins of the Father", "A Porcine of Interest", "Getting Ahead",
+                "A Night at the Theatre",
+                "A Kingdom Divided", "Land of the Goblins", "Temple of the Eye", "Beneath Cursed Sands",
+                "Sleeping Giants",
+                "The Garden of Death", "Secrets of the North", "Desert Treasure II - The Fallen Empire",
+                "The Path of Glouphrie",
+                "Children of the Sun", "Defender of Varrock", "Twilight's Promise", "At First Light", "Perilous Moons",
+                "The Ribbiting Tale of a Lily Pad Labour Dispute"
+            ]
             missing_quests = []
             quest_count = 0
             for quest in gamers_quest_status:
@@ -4437,7 +4458,6 @@ class Runescape(commands.Cog):
                       gamer: str):
         url = f"https://sync.runescape.wiki/runelite/player/{gamer}/STANDARD"
 
-
         status, gamer_info = await request(url,
                                            headers={"User-Agent": "Message me on discord if you got beef - moists0ck"})
         if status != 200:
@@ -4445,7 +4465,8 @@ class Runescape(commands.Cog):
                 return await interaction.response.send_message(f"No information was found for the user: `{gamer}`")
             return await interaction.response.send_message(f"something went horribly wrong - error {status}")
 
-        if gamer_info['achievement_diaries'][area.name][tier.name]['complete'] and False not in gamer_info['achievement_diaries'][area.name][tier.name]["tasks"]:
+        if gamer_info['achievement_diaries'][area.name][tier.name]['complete'] and False not in \
+                gamer_info['achievement_diaries'][area.name][tier.name]["tasks"]:
             msg = f"{gamer} has completed the {area.name} {tier.name} :)"
             return await interaction.response.send_message(msg)
 

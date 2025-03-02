@@ -227,9 +227,10 @@ class League(Cog):
 
         status_code, mastery_info = await self.mastery_request(summoner_id, champion_id)
 
+
         if status_code == 200:
             mastery_level = mastery_info['championLevel']
-            chest_earned = mastery_info['chestGranted']
+            # chest_earned = mastery_info['chestGranted']
             mastery_points = mastery_info['championPoints']
             last_played = mastery_info['lastPlayTime']
             tokens_earned = mastery_info['tokensEarned']
@@ -239,7 +240,7 @@ class League(Cog):
 
         elif status_code == 404:
             mastery_level = 0
-            chest_earned = 'Of course not'
+            # chest_earned = 'Of course not'
             mastery_points = 0
             last_played = 0
             tokens_earned = 0
@@ -268,7 +269,7 @@ class League(Cog):
         embed_msg.set_thumbnail(url=png)
         embed_msg.add_field(name='Mastery Points', value=f"{mastery_points:,}", inline=False)  # large numbers get comma
         embed_msg.add_field(name='Mastery Level', value=mastery_level)
-        embed_msg.add_field(name='Chest Earned', value=chest_earned)
+        # embed_msg.add_field(name='Chest Earned', value=chest_earned)
 
         if mastery_level < 5:
             embed_msg.add_field(name='Points Until Level 5', value=f"{21600 - mastery_points:,}", inline=False)

@@ -5,7 +5,32 @@ import json
 async def get_stats(user):
     status, raw_stats = await hiscores(user)
     if status != 200:
-        return status, None
+        return status, {
+            'Overall': {'rank': 0, 'level': 0, 'xp': 0},
+            'Attack': {'rank': 0, 'level': 0, 'xp': 0},
+            'Defence': {'rank': 0, 'level': 0, 'xp': 0},
+            'Strength': {'rank': 0, 'level': 0, 'xp': 0},
+            'Hitpoints': {'rank': 0, 'level': 0, 'xp': 0},
+            'Ranged': {'rank': 0, 'level': 0, 'xp': 0},
+            'Prayer': {'rank': 0, 'level': 0, 'xp': 0},
+            'Magic': {'rank': 0, 'level': 0, 'xp': 0},
+            'Cooking': {'rank': 0, 'level': 0, 'xp': 0},
+            'Woodcutting': {'rank': 0, 'level': 0, 'xp': 0},
+            'Fletching': {'rank': 0, 'level': 0, 'xp': 0},
+            'Fishing': {'rank': 0, 'level': 0, 'xp': 0},
+            'Firemaking': {'rank': 0, 'level': 0, 'xp': 0},
+            'Crafting': {'rank': 0, 'level': 0, 'xp': 0},
+            'Smithing': {'rank': 0, 'level': 0, 'xp': 0},
+            'Mining': {'rank': 0, 'level': 0, 'xp': 0},
+            'Herblore': {'rank': 0, 'level': 0, 'xp': 0},
+            'Agility': {'rank': 0, 'level': 0, 'xp': 0},
+            'Thieving': {'rank': 0, 'level': 0, 'xp': 0},
+            'Slayer': {'rank': 0, 'level': 0, 'xp': 0},
+            'Farming': {'rank': 0, 'level': 0, 'xp': 0},
+            'Runecraft': {'rank': 0, 'level': 0, 'xp': 0},
+            'Hunter': {'rank': 0, 'level': 0, 'xp': 0},
+            'Construction': {'rank': 0, 'level': 0, 'xp': 0}
+        }
 
     return status, levels_wrapper(raw_stats)
 

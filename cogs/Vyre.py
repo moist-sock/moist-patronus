@@ -33,12 +33,27 @@ class Vyre(commands.Cog):
     async def on_message(self, message):
         if message.channel.id != 1224440634161500221:
             return
-        # print(message.content)
-        if message.content != "<@965663111996669992> NPC aggression has expired!":
+
+        messages_to_check_for = ["<@965663111996669992> Random event spawned: Genie",
+                                 "<@965663111996669992> NPC aggression has expired!",
+                                 "<@965663111996669992> You received a highlighted drop: Unidentified large fossil",
+                                 "<@965663111996669992> You received a highlighted drop: Unidentified medium fossil",
+                                 "<@965663111996669992> You received a highlighted drop: Unidentified rare fossil",
+                                 "<@965663111996669992> You received a highlighted drop: Shield left half",
+                                 "<@965663111996669992> You received a valuable drop: Blood shard"
+                                 ]
+        if message.content not in messages_to_check_for:
             return
         notification = message.content.split('>', 1)[1].strip()
 
+        if "You received a highlighted drop:" in notification: 
+            notification = notification[33:] + " !!!"
+
         return await send_email(notification)
+
+    async def msg_moist(self):
+        await self.bot.get_user(self.bot.settings.moist_id).send(
+            "You need to reset crab aggro king")
 
 
 async def setup(bot):
