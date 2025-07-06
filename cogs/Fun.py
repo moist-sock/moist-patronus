@@ -5,12 +5,15 @@ import discord
 import textdistance
 from discord import app_commands
 from discord.ext import commands
+from util.time_functions import run_daily_task
+import asyncio
 import json
 
 
 class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.jason_gm = asyncio.create_task(self.annoy_jason())
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -78,6 +81,18 @@ class Fun(commands.Cog):
             distances.append([real_thing_in_list, textdistance.Levenshtein()(real_thing_in_list.lower(), thing_that_need_spellcheck)])
 
         return sorted(distances, key=lambda x: x[1])[0][0]
+
+    async def annoy_jason(self):
+        await self.bot.wait_until_ready()
+        while self is self.bot.get_cog('Fun'):
+            await run_daily_task('08:00:00', "US/Mountain")
+            await self.say_good_morning()
+
+    async def say_good_morning(self):
+        jason_id = 150021270426091520
+        await self.bot.get_user(jason_id).send("good morning to you and to jarvis... jerk it a little")
+        await self.bot.get_user(272945366029172748).send("i said good morning to jason")
+
 
 async def setup(bot):
     await bot.add_cog(Fun(bot))

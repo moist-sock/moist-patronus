@@ -3319,10 +3319,14 @@ class Runescape(commands.Cog):
 
         boss = await self.boss_spell_check(raw_boss)
 
-        if ctx.message.author.nick is not None:
-            title_name = ctx.message.author.nick
+        try:
+            if ctx.message.author.nick is not None:
+                title_name = ctx.message.author.nick
 
-        else:
+            else:
+                title_name = ctx.message.author.name
+        except AttributeError:
+            
             title_name = ctx.message.author.name
 
         embed_msg = Embed(
@@ -3377,6 +3381,8 @@ class Runescape(commands.Cog):
         news_loop = "on"
         items_loop = "on"
         account_loop = "on"
+        jason_gm = "on"
+        chibi_harass = "on"
 
         if self.bot.get_cog('Getracker').item_loop.done():
             items_loop = "off"
@@ -3386,11 +3392,17 @@ class Runescape(commands.Cog):
             news_loop = "off"
         if self.account_data.done():
             account_loop = "off"
+        if self.bot.get_cog("Fun").jason_gm.done():
+            jason_gm = "off"
+        if self.bot.get_cog("League").chibi_loop.done():
+            chibi_harass = "on"
 
         await ctx.send(f"spreadsheet loop is {spread_loop}\n"
                        f"news post loop is {news_loop}\n"
                        f"item loop is {items_loop}\n"
-                       f"account data loop is {account_loop}")
+                       f"account data loop is {account_loop}\n"
+                       f"gm jason is {jason_gm}\n"
+                       f"chibi harass is {chibi_harass}")
 
     @commands.command()
     async def ranboss(self, ctx):
@@ -3759,6 +3771,7 @@ class Runescape(commands.Cog):
             await self.bot.get_channel(real_id).send(embed=embed)
             await self.bot.get_user(self.bot.settings.moist_id).send(embed=embed)
             await self.bot.get_user(426983855656796162).send(embed=embed)  # clark id
+            await self.bot.get_channel(728828621795491983).send(embed=embed)  # refried bees #general
 
     def this_is_a_news_link(self, url):
         is_link = True
@@ -3821,10 +3834,11 @@ class Runescape(commands.Cog):
         return status, embed
 
     async def spreadsheet_loop(self):
-        await self.bot.wait_until_ready()
-        while self is self.bot.get_cog('Runescape'):
-            await run_daily_task('08:00:00')
-            await self.run_spreadsheets()
+        return
+        # await self.bot.wait_until_ready()
+        # while self is self.bot.get_cog('Runescape'):
+        #     await run_daily_task('08:00:00')
+        #     await self.run_spreadsheets()
 
     async def account_data_loop(self):
         await self.bot.wait_until_ready()
@@ -3841,8 +3855,6 @@ class Runescape(commands.Cog):
     async def run_spreadsheets(self):
 
         await self.bot.get_user(self.bot.settings.moist_id).send(
-            "Good morning!!\nI am gonna update the spreadsheets now :D")
-        await self.bot.get_user(self.bot.settings.sarah_id).send(
             "Good morning!!\nI am gonna update the spreadsheets now :D")
 
         await inputter("The Whisperer", "whisperer kc", compare_rank=1)

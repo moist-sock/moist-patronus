@@ -219,7 +219,7 @@ class Getracker(commands.Cog):
             if not (high_price and low_price):
                 continue
 
-            tax = high_price * 0.01
+            tax = high_price * 0.02
 
             if tax > 5_000_000:
                 tax = 5_000_000
@@ -524,7 +524,7 @@ class Getracker(commands.Cog):
         return sorted(distances, key=lambda x: x[1])[0][0]
 
     def tax(self, price):
-        tax = price * 0.01
+        tax = price * 0.02
         if tax > 5_000_000:
             tax = 5_000_000
 

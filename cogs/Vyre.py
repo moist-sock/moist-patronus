@@ -33,6 +33,7 @@ class Vyre(commands.Cog):
     async def on_message(self, message):
         if message.channel.id != 1224440634161500221:
             return
+        #  @Moist Patronus You received a valuable drop: Blood shard
 
         messages_to_check_for = ["<@965663111996669992> Random event spawned: Genie",
                                  "<@965663111996669992> NPC aggression has expired!",

@@ -32,7 +32,8 @@ class League(Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.expired = f'I will not work until <@765451755332304927> feeds me token :('
+        self.expired = f'I will not work until i have token :('
+        self.chibi_loop = asyncio.create_task(self.harass_chibi_loop())
 
         try:
             self.token = the_token
@@ -40,6 +41,8 @@ class League(Cog):
             self.token = None
 
         self.champion_info = champs.CHAMP_INFO
+        self.chibi_rank = None
+        self.moist_puuid = "tfBEivf_x_p5_1U_5hNaJEOpuzi6gf0a_swK-yyKqO2NVF--8MwDqZTj0QsL9DjaY3DNhHiiaY-AYw"
 
     def _check_if_not_moist(self, ctx):
         """Checks if the moist is the one that used the command."""
@@ -52,11 +55,9 @@ class League(Cog):
         ranked_solo = True
         queues = ["RANKED_FLEX_SR", "RANKED_SOLO_5x5"]
         if summoner_name:
-            status_code, summoner_dict = await self.summoner_name_request(ctx, summoner_name)
+            status_code, puuid = await self.summoner_name_to_puuid_request(ctx, summoner_name)
             if status_code != 200:
                 return
-            summoner_name = summoner_dict["name"]
-            summoner_id = summoner_dict["id"]
 
         else:
             summoner_name, summoner_id = await self.get_summoner(ctx)
@@ -64,7 +65,7 @@ class League(Cog):
         if summoner_name is None:
             return
 
-        status_code, summoner_rank_dict = await self.get_rank(summoner_id)
+        status_code, summoner_rank_dict = await self.get_rank(puuid)
 
         if status_code != 200:
             print(f"error {status_code}: !rank command")
@@ -96,9 +97,9 @@ class League(Cog):
             return await ctx.send('You are not allowed to do that')
 
         new_api_key = args[0].strip()
-        for i in range(50):
+        for i in range(100):
             r = await async_request.request(
-                f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/tfBEivf_x_p5_1U_5hNaJEOpuzi6gf0a_swK-yyKqO2NVF--8MwDqZTj0QsL9DjaY3DNhHiiaY-AYw',
+                f'https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid/tfBEivf_x_p5_1U_5hNaJEOpuzi6gf0a_swK-yyKqO2NVF--8MwDqZTj0QsL9DjaY3DNhHiiaY-AYw?api_key=RGAPI-fdffb770-0b4c-4fd5-a217-e52541f0ad2d',
                 headers={"X-Riot-Token": new_api_key})
 
             if r[0] == 200:
@@ -123,13 +124,11 @@ class League(Cog):
         outcome = ''
         last_few_games = []
         summoner_name = " ".join(args)
-        status_code, summoner_dict = await self.summoner_name_request(ctx, summoner_name)
+        status_code, summoner_puuid = await self.summoner_name_to_puuid_request(ctx, summoner_name)
 
         if status_code != 200:
             return
 
-        summoner_puuid = summoner_dict['puuid']
-        summoner_name = summoner_dict['name']
         url = f'https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{summoner_puuid}/ids?type=ranked&start=0&count=10'
         r = await self.league_api_request(url)
 
@@ -173,23 +172,29 @@ class League(Cog):
     @commands.command()
     async def summoner(self, ctx, *args, ff=False):
         """Adds summoner info into json so the mastery command will work."""
-        summoner_name = " ".join(args).strip()
+
+        if not args:
+            return await ctx.send("Send your riot account in the form of Accountname#Tag")
+
+        try:
+            summoner_name, summoner_tag = ''.join(args).split("#")
+
+        except ValueError:
+            return await ctx.send("Send your riot account in the form of Accountname#Tag")
+
         if summoner_name is None or summoner_name == '':
             return await ctx.send("You need to type your league name silly goose!")
 
-        status_code, summoner_dict = await self.summoner_name_request(ctx, summoner_name)
+        status_code, puuid = await self.summoner_name_to_puuid_request(ctx, args)
 
         if status_code != 200:
             return
-
-        summoner_name = summoner_dict['name']
-        summoner_id = summoner_dict['puuid']
 
         with open('storage/league.json', 'w') as f:
             persons_id = str(ctx.author.id)
             user_dict = league_dict['users'].get(persons_id, {})
             user_dict['summoner name'] = summoner_name
-            user_dict['summoner id'] = summoner_id
+            user_dict['summoner id'] = puuid
 
             league_dict['users'][persons_id] = user_dict
 
@@ -226,7 +231,6 @@ class League(Cog):
             return await ctx.send(f'Please set your league account with !summoner')
 
         status_code, mastery_info = await self.mastery_request(summoner_id, champion_id)
-
 
         if status_code == 200:
             mastery_level = mastery_info['championLevel']
@@ -270,13 +274,6 @@ class League(Cog):
         embed_msg.add_field(name='Mastery Points', value=f"{mastery_points:,}", inline=False)  # large numbers get comma
         embed_msg.add_field(name='Mastery Level', value=mastery_level)
         # embed_msg.add_field(name='Chest Earned', value=chest_earned)
-
-        if mastery_level < 5:
-            embed_msg.add_field(name='Points Until Level 5', value=f"{21600 - mastery_points:,}", inline=False)
-        elif mastery_level == 5:
-            embed_msg.add_field(name='Tokens needed', value=str(2 - tokens_earned), inline=False)
-        elif mastery_level == 6:
-            embed_msg.add_field(name='Tokens needed', value=str(3 - tokens_earned), inline=False)
 
         if last_played:
             embed_msg.set_footer(
@@ -385,8 +382,15 @@ class League(Cog):
     async def league_api_request(self, url):
         return await async_request.request(url, headers={"X-Riot-Token": self.token})
 
-    async def summoner_name_request(self, ctx, summoner_name):
-        url = f'https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}'
+    async def summoner_name_to_puuid_request(self, ctx, *args):
+
+        try:
+            summoner_name, summoner_tag = ' '.join(args).split("#")
+
+        except TypeError:
+            summoner_name, summoner_tag = ' '.join(args[0]).split("#")
+
+        url = f'https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{summoner_name}/{summoner_tag}?{self.token}'
         r = await self.league_api_request(url)
 
         status_code = r[0]
@@ -402,7 +406,9 @@ class League(Cog):
 
             return status_code, None
 
-        return status_code, r[1]
+        puuid = r[1]['puuid']
+
+        return status_code, puuid
 
     async def parse_champion_input(self, raw_input):
         champion = ' '.join(raw_input).title()
@@ -441,9 +447,99 @@ class League(Cog):
             return summoner_name, summoner_id
 
     async def get_rank(self, summoner_id):
-        url = f"https://na1.api.riotgames.com/lol/league/v4/entries/by-summoner/{summoner_id}"
+        url = f"https://na1.api.riotgames.com/lol/league/v4/entries/by-puuid/{summoner_id}"
         status_code, summoner_rank_dict = await self.league_api_request(url)
         return status_code, summoner_rank_dict
+
+    async def harass_chibi_loop(self):
+        await self.bot.wait_until_ready()
+        while self is self.bot.get_cog('League'):
+            await self.harass_chibi()
+            await asyncio.sleep(600)
+
+    async def harass_chibi(self):
+        chibi_janna_puuid = 'aQrZ1cfPqqQP6G3I4tNOsBMuQAFbgNufN01O9yVdjwKL25iqscCQfX3jfoHzgRhlY_XmXKl15XSc4Q'
+        status_code, summoner_rank_dict = await self.get_rank(chibi_janna_puuid)
+
+        if status_code != 200:
+
+            if status_code == 403:
+                for _ in range(5):
+                    await self.bot.get_user(self.bot.settings.moist_id).send("YOU NEED TO CHANGE THE RIOT API TOKEN ASAP")
+
+                await asyncio.sleep(86400)
+                return
+
+            elif status_code == 429:
+                await self.bot.get_user(self.bot.settings.moist_id).send("dude the chibi harass is getting rate limited do something")
+                await asyncio.sleep(1200)
+                return
+
+            else:
+                await self.bot.get_user(self.bot.settings.moist_id).send(f"{status_code} has occurred in harass chibi and i dont know what to do")
+                return
+
+        if not summoner_rank_dict or (len(summoner_rank_dict) == 1 and summoner_rank_dict[0]['queueType'] != "RANKED_SOLO_5x5"):
+            return
+
+        if len(summoner_rank_dict) == 2:
+            rank = summoner_rank_dict[1]['tier']
+
+        else:
+            rank = summoner_rank_dict[0]['tier']
+
+        if self.chibi_rank == 'DIAMOND' and rank == 'EMERALD':
+            chumbucket_general = 446218949684887556
+            await self.bot.get_channel(chumbucket_general).send("🚨🚨🚨<@1321695082096889858> HAS JUST FELL TO EMERALD🚨🚨🚨")
+
+        self.chibi_rank = rank
+
+    @commands.command()
+    async def no_mastery(self, ctx):
+
+        try:
+            # pycharm was giving moist annoying warnings these comments got rid of them
+            # Expected type 'Union[int, slice]', got 'str' instead
+
+            # noinspection PyTypeChecker
+            summoner_name = league_dict['users'][str(ctx.author.id)]['summoner name']
+            # noinspection PyTypeChecker
+            puuid = league_dict['users'][str(ctx.author.id)]['summoner id']
+
+        except KeyError:
+            return await ctx.send(f'Please set your league account with !summoner')
+
+        request_url = f"https://na1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}"
+
+        r = await self.league_api_request(request_url)
+
+        status_code = r[0]
+        if status_code != 200:
+            return await ctx.send(f"Error {status_code}")
+
+        dict2 = champs.CHAMP_INFO.copy()
+        dict1 = r[1]
+
+        keys_to_delete = []
+
+        for d in dict1:
+            target_value = d.get("championId")
+            for key, nested in dict2.items():
+                if isinstance(nested, dict) and nested.get("ID") == target_value:
+                    keys_to_delete.append(key)
+
+        for key in keys_to_delete:
+            dict2.pop(key)
+
+        list_of_non_played_champs = list(dict2.keys())
+        if list_of_non_played_champs:
+            msg = f"Champs {summoner_name} has never played;\n" \
+                  f"{', '.join(list_of_non_played_champs)}"
+        else:
+            msg = f"{summoner_name} has played EVERY champion in game"
+
+        return await ctx.send(msg)
+
 
 async def setup(bot):
     await bot.add_cog(League(bot))
