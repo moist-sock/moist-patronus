@@ -10,6 +10,11 @@ from discord.ext.commands import Cog
 
 from util import async_request, champs
 
+from PIL import Image
+import requests
+from io import BytesIO
+import math
+
 try:
     with open('storage/league.json') as f:
         league_dict = json.load(f)
@@ -43,6 +48,7 @@ class League(Cog):
         self.champion_info = champs.CHAMP_INFO
         self.chibi_rank = None
         self.moist_puuid = "tfBEivf_x_p5_1U_5hNaJEOpuzi6gf0a_swK-yyKqO2NVF--8MwDqZTj0QsL9DjaY3DNhHiiaY-AYw"
+        self.image_lock = asyncio.Lock()
 
     def _check_if_not_moist(self, ctx):
         """Checks if the moist is the one that used the command."""
@@ -494,7 +500,7 @@ class League(Cog):
 
         self.chibi_rank = rank
 
-    @commands.command()
+    @commands.command(aliases=['nm'])
     async def no_mastery(self, ctx):
 
         try:
@@ -532,13 +538,46 @@ class League(Cog):
             dict2.pop(key)
 
         list_of_non_played_champs = list(dict2.keys())
-        if list_of_non_played_champs:
-            msg = f"Champs {summoner_name} has never played;\n" \
-                  f"{', '.join(list_of_non_played_champs)}"
-        else:
-            msg = f"{summoner_name} has played EVERY champion in game"
 
-        return await ctx.send(msg)
+        image_urls = [champ_data["PNG"] for champ_data in dict2.values()]
+
+        images_per_row = 6
+        async with self.image_lock:
+            if image_urls:
+                images = []
+                for url in image_urls:
+                    response = requests.get(url)
+                    img = Image.open(BytesIO(response.content)).convert("RGBA")
+                    images.append(img)
+
+                width, height = images[0].size
+
+                num_images = len(images)
+                rows = math.ceil(num_images / images_per_row)
+                new_width = width * images_per_row
+                new_height = height * rows
+                new_image = Image.new('RGBA', (new_width, new_height))
+
+                for i, img in enumerate(images):
+                    x = (i % images_per_row) * width
+                    y = (i // images_per_row) * height
+                    new_image.paste(img, (x, y))
+
+                with BytesIO() as image_binary:
+                    new_image.save(image_binary, 'PNG')
+                    image_binary.seek(0)
+                    file = discord.File(image_binary, filename="image.png")
+
+            if list_of_non_played_champs:
+                msg = f"Champs {summoner_name} has never played;\n" \
+                      f"{', '.join(list_of_non_played_champs)}"
+            else:
+                msg = f"{summoner_name} has played EVERY champion in game"
+
+            await ctx.send(msg)
+
+            if image_urls:
+                await ctx.send(file=file)
 
 
 async def setup(bot):

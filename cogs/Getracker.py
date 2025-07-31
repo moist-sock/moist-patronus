@@ -359,8 +359,13 @@ class Getracker(commands.Cog):
         return await self.ge_api_request("https://prices.runescape.wiki/api/v1/osrs/5m")
 
     async def cry(self, investment_dict):
-        items_sold = investment_dict["items_sold"]
-        items_bought = investment_dict["items_bought"]
+        try:
+            items_sold = investment_dict["items_sold"]
+            items_bought = investment_dict["items_bought"]
+
+        except TypeError:
+
+            return "This investment is EMPTY"
 
         status, items_prices = await self.all_item_price_with_most_recent_transaction()
 
