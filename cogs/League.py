@@ -103,13 +103,9 @@ class League(Cog):
             return await ctx.send('You are not allowed to do that')
 
         new_api_key = args[0].strip()
-        for i in range(100):
-            r = await async_request.request(
-                f'https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid/tfBEivf_x_p5_1U_5hNaJEOpuzi6gf0a_swK-yyKqO2NVF--8MwDqZTj0QsL9DjaY3DNhHiiaY-AYw?api_key=RGAPI-fdffb770-0b4c-4fd5-a217-e52541f0ad2d',
-                headers={"X-Riot-Token": new_api_key})
-
-            if r[0] == 200:
-                break
+        r = await async_request.request(
+            f'https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid/tfBEivf_x_p5_1U_5hNaJEOpuzi6gf0a_swK-yyKqO2NVF--8MwDqZTj0QsL9DjaY3DNhHiiaY-AYw',
+            headers={"X-Riot-Token": new_api_key})
 
         if r[0] != 200:
             return await ctx.send(f'API key failed to update!\nError#: {r[0]}')
@@ -120,7 +116,7 @@ class League(Cog):
 
         self.token = new_api_key
 
-        return await ctx.send('API key successfully updated')
+        return await ctx.send(f'API key successfully updated')
 
     @commands.command()
     async def streak(self, ctx, *args):
@@ -479,6 +475,11 @@ class League(Cog):
             elif status_code == 429:
                 await self.bot.get_user(self.bot.settings.moist_id).send("dude the chibi harass is getting rate limited do something")
                 await asyncio.sleep(1200)
+                return
+
+            elif status_code == 401:
+                await self.bot.get_user(self.bot.settings.moist_id).send(f"https://developer.riotgames.com/\n"
+                                                                         f"chibi harass needs new token go go go")
                 return
 
             else:
