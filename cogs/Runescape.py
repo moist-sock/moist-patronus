@@ -3326,7 +3326,7 @@ class Runescape(commands.Cog):
             else:
                 title_name = ctx.message.author.name
         except AttributeError:
-            
+
             title_name = ctx.message.author.name
 
         embed_msg = Embed(
@@ -4443,6 +4443,7 @@ class Runescape(commands.Cog):
 
     @app_commands.command(name="diary", description="check requirements")
     @app_commands.choices(area=[
+        discord.app_commands.Choice(name='All', value=0),
         discord.app_commands.Choice(name='Ardougne', value=1),
         discord.app_commands.Choice(name='Desert', value=2),
         discord.app_commands.Choice(name='Falador', value=3),
@@ -4476,6 +4477,10 @@ class Runescape(commands.Cog):
             if status == 400:
                 return await interaction.response.send_message(f"No information was found for the user: `{gamer}`")
             return await interaction.response.send_message(f"something went horribly wrong - error {status}")
+
+        if area.name == 'All':
+            msg = await self.all_diaries(tier.name, gamer_info)
+            return await interaction.response.send_message(msg)
 
         if gamer_info['achievement_diaries'][area.name][tier.name]['complete'] and False not in \
                 gamer_info['achievement_diaries'][area.name][tier.name]["tasks"]:
@@ -4520,6 +4525,31 @@ class Runescape(commands.Cog):
                 return await interaction.response.send_message("FUCK")
 
         return await interaction.response.send_message(msg)
+
+    async def all_diaries(self, required_tier, gamer_info):
+        with open("storage/diary_reqs.json", "r") as f:
+            diary_reqs_dict = json.load(f)
+
+        areas = [
+            'Ardougne',
+            'Desert',
+            'Falador',
+            'Fremennik',
+            'Kandarin',
+            'Karamja',
+            'Kourend & Kebos',
+            'Lumbridge & Draynor',
+            'Morytania',
+            'Varrock',
+            'Western Provinces',
+            'Wilderness'
+        ]
+        tiers = ['Easy', 'Medium', 'Hard', 'Elite']
+
+        reqs_needed = await self.combine_reqs(
+            [diary_reqs_dict[area][tier] for area in areas for tier in tiers[:tiers.index(required_tier) + 1]])
+
+        return await self.check_reqs(reqs_needed, gamer_info)
 
 
 async def setup(bot):

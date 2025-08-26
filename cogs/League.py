@@ -103,9 +103,14 @@ class League(Cog):
             return await ctx.send('You are not allowed to do that')
 
         new_api_key = args[0].strip()
-        r = await async_request.request(
-            f'https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid/tfBEivf_x_p5_1U_5hNaJEOpuzi6gf0a_swK-yyKqO2NVF--8MwDqZTj0QsL9DjaY3DNhHiiaY-AYw',
-            headers={"X-Riot-Token": new_api_key})
+
+        for _ in range(100):
+            r = await async_request.request(
+                f'https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid/tfBEivf_x_p5_1U_5hNaJEOpuzi6gf0a_swK-yyKqO2NVF--8MwDqZTj0QsL9DjaY3DNhHiiaY-AYw',
+                headers={"X-Riot-Token": new_api_key})
+
+            if r[0] == 200:
+                break
 
         if r[0] != 200:
             return await ctx.send(f'API key failed to update!\nError#: {r[0]}')
